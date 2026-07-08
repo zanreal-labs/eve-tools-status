@@ -56,7 +56,13 @@ export async function runChecks(region: Region): Promise<CheckResult[]> {
     pipe.expire(dayKey, DAY_TTL_SECONDS);
   }
   pipe.hset(K.lastRun, region, String(now));
-  await pipe.exec();
+  const replies = (await pipe.exec()) ?? [];
+  const writeErrors = replies
+    .map(([err]) => err)
+    .filter((e): e is Error => Boolean(e));
+  if (writeErrors.length > 0) {
+    throw new Error(`redis write failed: ${writeErrors[0].message}`);
+  }
 
   return results;
 }
