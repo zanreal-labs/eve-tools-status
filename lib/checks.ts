@@ -34,6 +34,16 @@ async function checkOne(monitorId: string, url: string): Promise<CheckResult> {
   }
 }
 
+export type StatusEvent = {
+  ts: number;
+  monitorId: string;
+  region: Region;
+  ok: boolean;
+  status: number;
+};
+
+const EVENTS_MAX = 300;
+
 export async function runChecks(region: Region): Promise<CheckResult[]> {
   const results = await Promise.all(
     MONITORS.map((m) => checkOne(m.id, m.url)),
@@ -41,7 +51,37 @@ export async function runChecks(region: Region): Promise<CheckResult[]> {
 
   const now = Date.now();
   const date = new Date(now).toISOString().slice(0, 10);
+
+  // Detect status transitions vs the previous run in this region.
+  const prevRaw = await redis().hmget(
+    K.latest,
+    ...results.map((r) => `${r.monitorId}:${region}`),
+  );
+  const events: StatusEvent[] = [];
+  results.forEach((r, i) => {
+    let prevOk: boolean | null = null;
+    if (prevRaw[i]) {
+      try {
+        prevOk = Boolean(JSON.parse(prevRaw[i]!).ok);
+      } catch {}
+    }
+    const isTransition = prevOk === null ? !r.ok : prevOk !== r.ok;
+    if (isTransition) {
+      events.push({
+        ts: now,
+        monitorId: r.monitorId,
+        region,
+        ok: r.ok,
+        status: r.status,
+      });
+    }
+  });
+
   const pipe = redis().pipeline();
+  if (events.length > 0) {
+    pipe.lpush(K.events, ...events.map((e) => JSON.stringify(e)));
+    pipe.ltrim(K.events, 0, EVENTS_MAX - 1);
+  }
 
   for (const r of results) {
     pipe.hset(

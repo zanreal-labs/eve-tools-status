@@ -9,7 +9,9 @@ import {
   HISTORY_DAYS,
   type MonitorStatus,
   type DayStat,
+  type StatusEvent,
 } from "@/lib/status";
+import { SuggestTool } from "./suggest-tool";
 
 export const revalidate = 60;
 
@@ -97,7 +99,15 @@ function MonitorRow({
       <div className="mb-2 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <span className={`inline-block h-2 w-2 rounded-full ${meta.dot}`} />
-          <span className="font-medium">{monitor.name}</span>
+          <a
+            href={monitor.siteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium underline-offset-4 hover:underline"
+          >
+            {monitor.name}
+            <span className="ml-1 text-xs text-zinc-600">↗</span>
+          </a>
           <span className="hidden text-xs text-zinc-500 sm:inline">
             {monitor.description}
           </span>
@@ -119,12 +129,73 @@ function MonitorRow({
   );
 }
 
+const MONITOR_NAMES: Record<string, string> = Object.fromEntries(
+  CATEGORIES.flatMap((c) => c.monitors).map((m) => [m.id, m.name]),
+);
+
+function EventsLog({ events }: { events: StatusEvent[] }) {
+  return (
+    <section>
+      <h2 className="mb-2 px-1 text-sm font-medium uppercase tracking-wider text-zinc-500">
+        Recent Events
+      </h2>
+      <div className="rounded-lg border border-zinc-800 bg-zinc-900/40">
+        {events.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-zinc-500">
+            No incidents recorded yet.
+          </p>
+        ) : (
+          events.map((e, i) => (
+            <div
+              key={`${e.ts}-${e.monitorId}-${e.region}-${i}`}
+              className="flex items-center justify-between gap-3 border-t border-zinc-800/80 px-5 py-3 text-sm first:border-t-0"
+            >
+              <div className="flex items-center gap-2.5">
+                <span
+                  className={`inline-block h-2 w-2 rounded-full ${
+                    e.ok ? "bg-emerald-500" : "bg-red-500"
+                  }`}
+                />
+                <span className="font-medium">
+                  {MONITOR_NAMES[e.monitorId] ?? e.monitorId}
+                </span>
+                <span className={e.ok ? "text-emerald-400" : "text-red-400"}>
+                  {e.ok
+                    ? "recovered"
+                    : e.status > 0
+                      ? `down (HTTP ${e.status})`
+                      : "down (timeout)"}
+                </span>
+                <span className="text-xs text-zinc-500">
+                  from {REGION_LABELS[e.region]}
+                </span>
+              </div>
+              <span className="whitespace-nowrap text-xs tabular-nums text-zinc-500">
+                {new Date(e.ts).toLocaleString("en-GB", {
+                  timeZone: "UTC",
+                  hour12: false,
+                  day: "2-digit",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}{" "}
+                UTC
+              </span>
+            </div>
+          ))
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default async function Page() {
   let monitors: Record<string, MonitorStatus> = {};
   let lastRun: number | null = null;
+  let events: StatusEvent[] = [];
   let loadError = false;
   try {
-    ({ monitors, lastRun } = await loadStatus());
+    ({ monitors, lastRun, events } = await loadStatus());
   } catch {
     loadError = true;
   }
@@ -202,14 +273,31 @@ export default async function Page() {
             </div>
           </section>
         ))}
+
+        <EventsLog events={events} />
+
+        <SuggestTool />
       </div>
 
-      <footer className="mt-12 flex items-center justify-between border-t border-zinc-800 pt-6 text-xs text-zinc-500">
-        <span>
-          Last {HISTORY_DAYS} days · regions:{" "}
-          {REGIONS.map((r) => REGION_LABELS[r]).join(", ")}
-        </span>
-        <span>Not affiliated with CCP Games</span>
+      <footer className="mt-12 space-y-2 border-t border-zinc-800 pt-6 text-xs text-zinc-500">
+        <div className="flex items-center justify-between">
+          <span>
+            Last {HISTORY_DAYS} days · regions:{" "}
+            {REGIONS.map((r) => REGION_LABELS[r]).join(", ")}
+          </span>
+          <span>Not affiliated with CCP Games</span>
+        </div>
+        <div>
+          Made &amp; powered by{" "}
+          <a
+            href="https://zanreal.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-zinc-300 underline-offset-4 hover:underline"
+          >
+            ZanReal
+          </a>
+        </div>
       </footer>
     </main>
   );

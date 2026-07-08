@@ -21,6 +21,9 @@ export const K = {
   day: (date: string, monitorId: string, region: string) =>
     `ets:day:${date}:${monitorId}:${region}`,
   lastRun: "ets:lastRun",
+  events: "ets:events",
+  suggestions: "ets:suggestions",
+  rateLimit: (ip: string) => `ets:rl:${ip}`,
 };
 
 export const DAY_TTL_SECONDS = 100 * 24 * 60 * 60;

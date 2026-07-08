@@ -29,9 +29,18 @@ function dateStr(offsetDays: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+export type StatusEvent = {
+  ts: number;
+  monitorId: string;
+  region: Region;
+  ok: boolean;
+  status: number;
+};
+
 export async function loadStatus(): Promise<{
   monitors: Record<string, MonitorStatus>;
   lastRun: number | null;
+  events: StatusEvent[];
 }> {
   const r = redis();
   const dates = Array.from({ length: HISTORY_DAYS }, (_, i) =>
@@ -41,6 +50,7 @@ export async function loadStatus(): Promise<{
   const pipe = r.pipeline();
   pipe.hgetall(K.latest);
   pipe.hgetall(K.lastRun);
+  pipe.lrange(K.events, 0, 19);
   for (const m of MONITORS) {
     for (const date of dates) {
       for (const region of REGIONS) {
@@ -54,9 +64,10 @@ export async function loadStatus(): Promise<{
 
   const latestRaw = value(0);
   const lastRunRaw = value(1);
+  const eventsRaw = (replies[2]?.[1] ?? []) as string[];
 
   const monitors: Record<string, MonitorStatus> = {};
-  let idx = 2;
+  let idx = 3;
 
   for (const m of MONITORS) {
     const latest: Partial<Record<Region, LatestEntry>> = {};
@@ -91,9 +102,17 @@ export async function loadStatus(): Promise<{
     };
   }
 
+  const events: StatusEvent[] = [];
+  for (const raw of eventsRaw) {
+    try {
+      events.push(JSON.parse(raw));
+    } catch {}
+  }
+
   const runTimestamps = Object.values(lastRunRaw).map(Number).filter(Boolean);
   return {
     monitors,
     lastRun: runTimestamps.length ? Math.max(...runTimestamps) : null,
+    events,
   };
 }
