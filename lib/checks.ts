@@ -1,5 +1,13 @@
 import { MONITORS, type Region } from "./monitors";
-import { redis, K, DAY_TTL_SECONDS } from "./redis";
+import {
+  PATHS,
+  readJson,
+  writeJson,
+  HISTORY_RETENTION_DAYS,
+  type LatestFile,
+  type HistoryFile,
+  type StatusEvent,
+} from "./store";
 
 export type CheckResult = {
   monitorId: string;
@@ -9,6 +17,7 @@ export type CheckResult = {
 };
 
 const CHECK_TIMEOUT_MS = 10_000;
+const EVENTS_MAX = 100;
 const USER_AGENT = "eve-tools-status/1.0 (uptime monitor; +https://eve-tools-status.vercel.app)";
 
 async function checkOne(monitorId: string, url: string): Promise<CheckResult> {
@@ -34,40 +43,30 @@ async function checkOne(monitorId: string, url: string): Promise<CheckResult> {
   }
 }
 
-export type StatusEvent = {
-  ts: number;
-  monitorId: string;
-  region: Region;
-  ok: boolean;
-  status: number;
-};
-
-const EVENTS_MAX = 300;
-
 export async function runChecks(region: Region): Promise<CheckResult[]> {
-  const results = await Promise.all(
-    MONITORS.map((m) => checkOne(m.id, m.url)),
-  );
+  const [results, prevLatest, prevHistory, prevEvents] = await Promise.all([
+    Promise.all(MONITORS.map((m) => checkOne(m.id, m.url))),
+    readJson<LatestFile>(PATHS.latest(region)),
+    readJson<HistoryFile>(PATHS.history(region)),
+    readJson<StatusEvent[]>(PATHS.events(region)),
+  ]);
 
   const now = Date.now();
   const date = new Date(now).toISOString().slice(0, 10);
 
-  // Detect status transitions vs the previous run in this region.
-  const prevRaw = await redis().hmget(
-    K.latest,
-    ...results.map((r) => `${r.monitorId}:${region}`),
-  );
-  const events: StatusEvent[] = [];
-  results.forEach((r, i) => {
-    let prevOk: boolean | null = null;
-    if (prevRaw[i]) {
-      try {
-        prevOk = Boolean(JSON.parse(prevRaw[i]!).ok);
-      } catch {}
-    }
+  // Latest snapshot for this region.
+  const latest: LatestFile = { ts: now, results: {} };
+  for (const r of results) {
+    latest.results[r.monitorId] = { ok: r.ok, status: r.status, ms: r.latencyMs };
+  }
+
+  // Status transitions vs the previous run in this region.
+  const newEvents: StatusEvent[] = [];
+  for (const r of results) {
+    const prevOk = prevLatest?.results[r.monitorId]?.ok ?? null;
     const isTransition = prevOk === null ? !r.ok : prevOk !== r.ok;
     if (isTransition) {
-      events.push({
+      newEvents.push({
         ts: now,
         monitorId: r.monitorId,
         region,
@@ -75,34 +74,32 @@ export async function runChecks(region: Region): Promise<CheckResult[]> {
         status: r.status,
       });
     }
-  });
-
-  const pipe = redis().pipeline();
-  if (events.length > 0) {
-    pipe.lpush(K.events, ...events.map((e) => JSON.stringify(e)));
-    pipe.ltrim(K.events, 0, EVENTS_MAX - 1);
   }
+  const events = [...newEvents, ...(prevEvents ?? [])].slice(0, EVENTS_MAX);
 
+  // Daily aggregates, pruned to the retention window.
+  const history: HistoryFile = prevHistory ?? {};
+  const cutoff = new Date(now - HISTORY_RETENTION_DAYS * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  for (const d of Object.keys(history)) {
+    if (d < cutoff) delete history[d];
+  }
+  const day = (history[date] ??= {});
   for (const r of results) {
-    pipe.hset(
-      K.latest,
-      `${r.monitorId}:${region}`,
-      JSON.stringify({ ok: r.ok, status: r.status, ms: r.latencyMs, ts: now }),
-    );
-    const dayKey = K.day(date, r.monitorId, region);
-    pipe.hincrby(dayKey, "total", 1);
-    pipe.hincrby(dayKey, r.ok ? "ok" : "fail", 1);
-    pipe.hincrby(dayKey, "msSum", r.latencyMs);
-    pipe.expire(dayKey, DAY_TTL_SECONDS);
+    const agg = (day[r.monitorId] ??= { ok: 0, total: 0, msSum: 0 });
+    agg.total += 1;
+    if (r.ok) agg.ok += 1;
+    agg.msSum += r.latencyMs;
   }
-  pipe.hset(K.lastRun, region, String(now));
-  const replies = (await pipe.exec()) ?? [];
-  const writeErrors = replies
-    .map(([err]) => err)
-    .filter((e): e is Error => Boolean(e));
-  if (writeErrors.length > 0) {
-    throw new Error(`redis write failed: ${writeErrors[0].message}`);
-  }
+
+  await Promise.all([
+    writeJson(PATHS.latest(region), latest),
+    writeJson(PATHS.history(region), history),
+    newEvents.length > 0
+      ? writeJson(PATHS.events(region), events)
+      : Promise.resolve(),
+  ]);
 
   return results;
 }
