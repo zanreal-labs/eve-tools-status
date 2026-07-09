@@ -4,6 +4,9 @@ export type Monitor = {
   url: string;
   siteUrl: string;
   description: string;
+  /** Override the default check timeout — for hosts that tarpit the first
+   *  connection from datacenter IPs (SYN-retry ladder needs ~15-20s). */
+  timeoutMs?: number;
 };
 
 export type Category = {
@@ -87,6 +90,7 @@ export const CATEGORIES: Category[] = [
         url: "https://www.adam4eve.eu/",
         siteUrl: "https://www.adam4eve.eu/",
         description: "Market charts & statistics",
+        timeoutMs: 25_000,
       },
       {
         id: "evetycoon",

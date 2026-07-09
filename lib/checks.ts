@@ -28,7 +28,11 @@ export const CHECK_TIMEOUT_MS = 10_000;
 export const USER_AGENT =
   "Mozilla/5.0 (compatible; EveToolsStatusBot/1.0; +https://eve-tools-status.com/docs)";
 
-async function attempt(monitorId: string, url: string): Promise<CheckResult> {
+async function attempt(
+  monitorId: string,
+  url: string,
+  timeoutMs: number,
+): Promise<CheckResult> {
   const started = Date.now();
   try {
     const res = await fetch(url, {
@@ -36,7 +40,7 @@ async function attempt(monitorId: string, url: string): Promise<CheckResult> {
       redirect: "follow",
       cache: "no-store",
       headers: { "user-agent": USER_AGENT, accept: "*/*" },
-      signal: AbortSignal.timeout(CHECK_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     // Drain body so latency reflects a full response.
     await res.arrayBuffer().catch(() => undefined);
@@ -51,19 +55,23 @@ async function attempt(monitorId: string, url: string): Promise<CheckResult> {
   }
 }
 
-async function checkOne(monitorId: string, url: string): Promise<CheckResult> {
-  const first = await attempt(monitorId, url);
+async function checkOne(
+  monitorId: string,
+  url: string,
+  timeoutMs = CHECK_TIMEOUT_MS,
+): Promise<CheckResult> {
+  const first = await attempt(monitorId, url, timeoutMs);
   if (first.ok) return first;
   // One retry after a short pause — a single slow round shouldn't page as down.
   await new Promise((r) => setTimeout(r, 2000));
-  return attempt(monitorId, url);
+  return attempt(monitorId, url, timeoutMs);
 }
 
 export async function runChecks(region: Region): Promise<CheckResult[]> {
   const r = kv();
   const fields = MONITORS.map((m) => `${m.id}:${region}`);
   const [results, prevRaw] = await Promise.all([
-    Promise.all(MONITORS.map((m) => checkOne(m.id, m.url))),
+    Promise.all(MONITORS.map((m) => checkOne(m.id, m.url, m.timeoutMs))),
     r.hmget<Record<string, LatestEntry | null>>(K.latest, ...fields),
   ]);
 

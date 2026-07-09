@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { authorized } from "@/lib/checks";
 import { REGIONS } from "@/lib/monitors";
 
-export const maxDuration = 90;
+export const maxDuration = 150;
 export const dynamic = "force-dynamic";
 
 function baseUrl(): string {
@@ -23,7 +23,7 @@ export async function GET(req: Request) {
       const res = await fetch(`${base}/api/check/${region}`, {
         headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
         cache: "no-store",
-        signal: AbortSignal.timeout(75_000),
+        signal: AbortSignal.timeout(130_000),
       });
       if (!res.ok) throw new Error(`${region}: HTTP ${res.status}`);
       return res.json();
