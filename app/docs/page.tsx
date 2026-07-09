@@ -43,7 +43,7 @@ export default function DocsPage() {
         capsuleers can quickly see whether a tool is down for everyone or just
         for them. It is made by{" "}
         <a
-          href="https://zanreal.com"
+          href="https://zanreal.com?utm_source=eve-tools-status&utm_medium=referral&utm_campaign=status-page&utm_content=docs-about"
           className="text-zinc-100 underline underline-offset-4"
         >
           ZanReal
@@ -101,7 +101,7 @@ export default function DocsPage() {
         different health endpoint for your tool, use the form below or reach us
         via{" "}
         <a
-          href="https://zanreal.com/contact"
+          href="https://zanreal.com/contact?utm_source=eve-tools-status&utm_medium=referral&utm_campaign=status-page&utm_content=docs-contact"
           className="text-zinc-100 underline underline-offset-4"
         >
           zanreal.com/contact

@@ -45,7 +45,7 @@ export default function RootLayout({
           <div>
             Made &amp; powered by{" "}
             <a
-              href="https://zanreal.com"
+              href="https://zanreal.com?utm_source=eve-tools-status&utm_medium=referral&utm_campaign=status-page&utm_content=footer"
               target="_blank"
               rel="noopener noreferrer"
               className="text-zinc-300 underline-offset-4 hover:underline"
