@@ -41,6 +41,12 @@ export const CATEGORIES: Category[] = [
         siteUrl: "https://developers.eveonline.com/docs/services/sso/",
         description: "EVE Online single sign-on",
       },
+    ],
+  },
+  {
+    id: "combat",
+    name: "Killboards & Combat",
+    monitors: [
       {
         id: "zkillboard",
         name: "zKillboard",
@@ -48,11 +54,25 @@ export const CATEGORIES: Category[] = [
         siteUrl: "https://zkillboard.com/",
         description: "Killmail aggregator",
       },
+      {
+        id: "evekill",
+        name: "EVE-KILL",
+        url: "https://eve-kill.com/",
+        siteUrl: "https://eve-kill.com/",
+        description: "Killboard & battle intel",
+      },
+      {
+        id: "brevetools",
+        name: "BR EVE Tools",
+        url: "https://br.evetools.org/",
+        siteUrl: "https://br.evetools.org/",
+        description: "Battle report generator",
+      },
     ],
   },
   {
     id: "market",
-    name: "Market Tools",
+    name: "Market & Industry",
     monitors: [
       {
         id: "fuzzwork",
@@ -82,6 +102,27 @@ export const CATEGORIES: Category[] = [
         siteUrl: "https://evetycoon.com/",
         description: "Market browser & profit tracking",
       },
+      {
+        id: "ravworks",
+        name: "Ravworks",
+        url: "https://ravworks.com/",
+        siteUrl: "https://ravworks.com/",
+        description: "Industry & production planner",
+      },
+      {
+        id: "mutaplasmid",
+        name: "Mutaplasmid.space",
+        url: "https://mutaplasmid.space/",
+        siteUrl: "https://mutaplasmid.space/",
+        description: "Abyssal module market & stats",
+      },
+      {
+        id: "abysstracker",
+        name: "Abyss Tracker",
+        url: "https://abysstracker.com/",
+        siteUrl: "https://abysstracker.com/",
+        description: "Abyssal run & loot tracker",
+      },
     ],
   },
   {
@@ -109,6 +150,61 @@ export const CATEGORIES: Category[] = [
         siteUrl: "https://www.jita.space/",
         description: "EVE reference client",
       },
+      {
+        id: "gatecheck",
+        name: "Gatecamp Check",
+        url: "https://eve-gatecheck.space/",
+        siteUrl: "https://eve-gatecheck.space/",
+        description: "Gatecamp checker for travel routes",
+      },
+      {
+        id: "dscan",
+        name: "DScan.info",
+        url: "https://dscan.info/",
+        siteUrl: "https://dscan.info/",
+        description: "D-Scan & fleet composition analyzer",
+      },
+      {
+        id: "localthreat",
+        name: "Local Threat",
+        url: "https://localthreat.xyz/",
+        siteUrl: "https://localthreat.xyz/",
+        description: "Local chat threat analysis",
+      },
+      {
+        id: "incursions",
+        name: "EVE Incursions",
+        url: "https://eve-incursions.de/",
+        siteUrl: "https://eve-incursions.de/",
+        description: "Incursion spawn tracker",
+      },
+    ],
+  },
+  {
+    id: "wormholes",
+    name: "Wormholes",
+    monitors: [
+      {
+        id: "tripwire",
+        name: "Tripwire",
+        url: "https://tripwiremap.app/",
+        siteUrl: "https://tripwiremap.app/",
+        description: "Wormhole mapping tool",
+      },
+      {
+        id: "anoikis",
+        name: "Anoik.is",
+        url: "https://anoik.is/",
+        siteUrl: "https://anoik.is/",
+        description: "Wormhole system database",
+      },
+      {
+        id: "nexum",
+        name: "Nexum",
+        url: "https://eve-nexum.com/",
+        siteUrl: "https://eve-nexum.com/",
+        description: "Open-source wormhole mapper",
+      },
     ],
   },
   {
@@ -135,6 +231,13 @@ export const CATEGORIES: Category[] = [
         url: "https://www.eveworkbench.com/",
         siteUrl: "https://www.eveworkbench.com/",
         description: "Fitting & market platform",
+      },
+      {
+        id: "hoboleaks",
+        name: "Hoboleaks",
+        url: "https://hoboleaks.space/",
+        siteUrl: "https://hoboleaks.space/",
+        description: "Datamined patch diffs",
       },
     ],
   },
