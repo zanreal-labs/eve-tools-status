@@ -11,6 +11,20 @@ export const metadata: Metadata = {
   title: "EVE Tools Status",
   description:
     "Availability of EVE Online community tools, checked every 15 minutes from 4 regions.",
+  openGraph: {
+    title: "EVE Tools Status",
+    description:
+      "Availability of EVE Online community tools, checked every 15 minutes from 4 regions.",
+    url: "https://eve-tools-status.com",
+    siteName: "EVE Tools Status",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "EVE Tools Status",
+    description:
+      "Availability of EVE Online community tools, checked every 15 minutes from 4 regions.",
+  },
 };
 
 export default function RootLayout({
