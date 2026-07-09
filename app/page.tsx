@@ -5,15 +5,18 @@ import {
   type Monitor,
 } from "@/lib/monitors";
 import { loadStatus, HISTORY_DAYS, type MonitorStatus } from "@/lib/status";
+import { ExternalLink } from "lucide-react";
 import {
   HEALTH_META,
   StatusDot,
+  StatusIcon,
   UptimeBars,
   monitorHealth,
   utc,
   type Health,
 } from "./ui";
 import { Clock } from "./clock";
+import { NextCheck } from "./next-check";
 
 export const dynamic = "force-dynamic";
 
@@ -33,9 +36,10 @@ function MonitorRow({
           target="_blank"
           rel="noopener noreferrer"
           title={monitor.description}
-          className="text-[15px] font-medium text-zinc-100 underline-offset-4 hover:underline"
+          className="inline-flex items-center gap-1.5 text-[15px] font-medium text-zinc-100 underline-offset-4 hover:underline"
         >
-          {monitor.name} <span className="text-xs text-zinc-600">↗</span>
+          {monitor.name}
+          <ExternalLink className="h-3.5 w-3.5 text-zinc-600" aria-hidden />
         </a>
         <span
           className={`flex items-center gap-2 text-sm tabular-nums ${HEALTH_META[health].text}`}
@@ -47,7 +51,7 @@ function MonitorRow({
       {s ? (
         <UptimeBars days={s.days} />
       ) : (
-        <div className="h-12 rounded bg-zinc-900" />
+        <div className="h-12 rounded-sm bg-zinc-900" />
       )}
       <div className="mt-1.5 flex items-center justify-between text-xs text-zinc-500">
         <span>{HISTORY_DAYS} days ago</span>
@@ -103,19 +107,29 @@ export default async function Page() {
     <div>
       <Clock />
       <div
-        className={`mb-10 flex items-center justify-between gap-4 rounded-lg border px-5 py-4 ${banner[overall].cls}`}
+        className={`mb-10 rounded-sm border px-5 py-4 ${banner[overall].cls}`}
       >
-        <div className="flex items-center gap-3">
-          <StatusDot health={overall} />
-          <span className="text-lg font-semibold tracking-tight text-zinc-100">
-            {banner[overall].text}
-          </span>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <StatusIcon health={overall} className="h-6 w-6" />
+            <span className="text-lg font-semibold tracking-tight text-zinc-100">
+              {banner[overall].text}
+            </span>
+          </div>
+          {lastRun && (
+            <span className="hidden text-sm text-emerald-400/90 sm:block">
+              {utc(lastRun)}
+            </span>
+          )}
         </div>
-        {lastRun && (
-          <span className="hidden text-sm text-emerald-400/90 sm:block">
-            {utc(lastRun)}
-          </span>
-        )}
+        <div className="mt-2 flex items-center justify-between gap-4 pl-9">
+          {lastRun && (
+            <span className="text-xs text-zinc-500 sm:hidden">
+              last check {utc(lastRun)}
+            </span>
+          )}
+          <NextCheck />
+        </div>
       </div>
 
       {(() => {
@@ -128,7 +142,7 @@ export default async function Page() {
             <h2 className="mb-1 text-xs font-medium uppercase tracking-widest text-red-400">
               Active Issues
             </h2>
-            <div className="divide-y divide-zinc-900 rounded-lg border border-red-500/30 bg-red-500/5">
+            <div className="divide-y divide-zinc-900 rounded-sm border border-red-500/30 bg-red-500/5">
               {failing.map(({ m, s, health }) => {
                 const regions = REGIONS.filter((r) => {
                   const e = s?.latest[r];

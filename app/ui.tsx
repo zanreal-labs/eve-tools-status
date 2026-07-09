@@ -1,3 +1,9 @@
+import {
+  CircleCheck,
+  CircleDashed,
+  CircleX,
+  TriangleAlert,
+} from "lucide-react";
 import { REGIONS, REGION_LABELS } from "@/lib/monitors";
 import type { DayStat, MonitorStatus } from "@/lib/status";
 
@@ -65,6 +71,26 @@ export function StatusDot({ health }: { health: Health }) {
     <span
       className={`inline-block h-2 w-2 rounded-full ${HEALTH_META[health].dot}`}
     />
+  );
+}
+
+const HEALTH_ICONS = {
+  operational: CircleCheck,
+  degraded: TriangleAlert,
+  down: CircleX,
+  unknown: CircleDashed,
+} as const;
+
+export function StatusIcon({
+  health,
+  className = "h-5 w-5",
+}: {
+  health: Health;
+  className?: string;
+}) {
+  const Icon = HEALTH_ICONS[health];
+  return (
+    <Icon className={`${className} ${HEALTH_META[health].text}`} aria-hidden />
   );
 }
 

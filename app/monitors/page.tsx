@@ -1,5 +1,6 @@
 import { CATEGORIES } from "@/lib/monitors";
 import { loadStatus, type MonitorStatus } from "@/lib/status";
+import { ExternalLink } from "lucide-react";
 import { HEALTH_META, RegionChips, StatusDot, monitorHealth } from "../ui";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +26,7 @@ export default async function MonitorsPage() {
             <h2 className="mb-2 text-xs font-medium uppercase tracking-widest text-zinc-500">
               {cat.name}
             </h2>
-            <div className="divide-y divide-zinc-900 rounded-lg border border-zinc-800 bg-zinc-900/40">
+            <div className="divide-y divide-zinc-900 rounded-sm border border-zinc-800 bg-zinc-900/40">
               {cat.monitors.map((m) => {
                 const s = monitors[m.id];
                 const health = monitorHealth(s);
@@ -37,9 +38,10 @@ export default async function MonitorsPage() {
                         href={m.siteUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-medium text-zinc-100 underline-offset-4 hover:underline"
+                        className="inline-flex items-center gap-1.5 font-medium text-zinc-100 underline-offset-4 hover:underline"
                       >
-                        {m.name} <span className="text-xs text-zinc-600">↗</span>
+                        {m.name}
+                        <ExternalLink className="h-3.5 w-3.5 text-zinc-600" aria-hidden />
                       </a>
                       <span className={`flex items-center gap-2 text-sm ${meta.text}`}>
                         {meta.label}

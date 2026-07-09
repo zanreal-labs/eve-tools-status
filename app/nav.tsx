@@ -13,7 +13,7 @@ const TABS = [
 export function Nav() {
   const pathname = usePathname();
   return (
-    <nav className="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900/60 p-1">
+    <nav className="flex items-center gap-1 rounded-sm border border-zinc-800 bg-zinc-900/60 p-1">
       {TABS.map((t) => {
         const active =
           t.href === "/" ? pathname === "/" : pathname.startsWith(t.href);
@@ -21,9 +21,9 @@ export function Nav() {
           <Link
             key={t.href}
             href={t.href}
-            className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
+            className={`rounded-sm px-3 py-1.5 text-sm uppercase tracking-wider transition-colors ${
               active
-                ? "bg-zinc-800 text-zinc-100"
+                ? "bg-cyan-400/10 text-cyan-300"
                 : "text-zinc-400 hover:text-zinc-200"
             }`}
           >

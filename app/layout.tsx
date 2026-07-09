@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
+import { Activity } from "lucide-react";
 import { REGIONS, REGION_LABELS } from "@/lib/monitors";
 import { Nav } from "./nav";
 import { SuggestTool } from "./suggest-tool";
@@ -21,8 +22,8 @@ export default function RootLayout({
       <body className="min-h-screen bg-[#0a0a0a] font-mono text-zinc-200 antialiased">
         <header className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-5">
           <a href="/" className="flex items-center gap-2.5">
-            <span className="inline-block h-3 w-3 rounded-sm bg-emerald-500" />
-            <span className="text-sm font-semibold tracking-tight">
+            <Activity className="h-4 w-4 text-cyan-400" aria-hidden />
+            <span className="text-sm font-semibold uppercase tracking-wider">
               EVE Tools Status
             </span>
           </a>
@@ -30,9 +31,6 @@ export default function RootLayout({
         </header>
         <main className="mx-auto max-w-3xl px-4 pb-16 pt-6">{children}</main>
         <section className="mx-auto max-w-3xl px-4 pb-10">
-          <h2 className="mb-2 text-xs font-medium uppercase tracking-widest text-zinc-500">
-            Missing a tool?
-          </h2>
           <SuggestTool />
         </section>
         <footer className="mx-auto max-w-3xl space-y-2 border-t border-zinc-800 px-4 py-6 text-xs text-zinc-500">

@@ -39,11 +39,11 @@ export default async function EventsPage() {
       </p>
 
       {loadError ? (
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 px-5 py-10 text-center text-sm text-zinc-500">
+        <div className="rounded-sm border border-zinc-800 bg-zinc-900/40 px-5 py-10 text-center text-sm text-zinc-500">
           Event data unavailable.
         </div>
       ) : events.length === 0 ? (
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 px-5 py-10 text-center text-sm text-zinc-500">
+        <div className="rounded-sm border border-zinc-800 bg-zinc-900/40 px-5 py-10 text-center text-sm text-zinc-500">
           No incidents recorded yet. All quiet on the New Eden front.
         </div>
       ) : (
@@ -53,7 +53,7 @@ export default async function EventsPage() {
               <h2 className="mb-2 text-xs font-medium uppercase tracking-widest text-zinc-500">
                 {day}
               </h2>
-              <div className="divide-y divide-zinc-900 rounded-lg border border-zinc-800 bg-zinc-900/40">
+              <div className="divide-y divide-zinc-900 rounded-sm border border-zinc-800 bg-zinc-900/40">
                 {dayEvents.map((e, i) => (
                   <div
                     key={`${e.ts}-${e.monitorId}-${e.region}-${i}`}

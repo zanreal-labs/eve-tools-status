@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 function Code({ children }: { children: React.ReactNode }) {
   return (
-    <pre className="overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-xs leading-relaxed text-zinc-300">
+    <pre className="overflow-x-auto rounded-sm border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-xs leading-relaxed text-zinc-300">
       {children}
     </pre>
   );

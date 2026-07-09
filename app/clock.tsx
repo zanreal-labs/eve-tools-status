@@ -28,7 +28,7 @@ export function Clock() {
   }, []);
 
   return (
-    <div className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-zinc-800 bg-zinc-800/60 sm:grid-cols-3 lg:grid-cols-6">
+    <div className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-sm border border-zinc-800 bg-zinc-800/60 sm:grid-cols-3 lg:grid-cols-6">
       {ZONES.map((z) => (
         <div
           key={z.label}
@@ -36,7 +36,7 @@ export function Clock() {
         >
           <span
             className={`text-[10px] uppercase tracking-wider ${
-              z.accent ? "text-emerald-400" : "text-zinc-500"
+              z.accent ? "text-cyan-400" : "text-zinc-500"
             }`}
           >
             {z.label}
