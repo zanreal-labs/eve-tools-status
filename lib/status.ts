@@ -41,6 +41,7 @@ export async function loadStatus(): Promise<{
   monitors: Record<string, MonitorStatus>;
   lastRun: number | null;
   events: StatusEvent[];
+  openIncidents: Record<string, string>;
 }> {
   const r = kv();
   const dates = Array.from({ length: HISTORY_DAYS }, (_, i) =>
@@ -51,15 +52,22 @@ export async function loadStatus(): Promise<{
   pipe.hgetall(K.latest);
   pipe.hgetall(K.lastRun);
   pipe.lrange(K.events, 0, 19);
+  pipe.mget(...MONITORS.map((m) => K.open(m.id)));
   for (const date of dates) pipe.hgetall(K.day(date));
   const replies = await pipe.exec<unknown[]>();
 
   const latestRaw = (replies[0] ?? {}) as Record<string, unknown>;
   const lastRunRaw = (replies[1] ?? {}) as Record<string, unknown>;
   const eventsRaw = (replies[2] ?? []) as unknown[];
+  const openRaw = (replies[3] ?? []) as (string | null)[];
   const dayHashes = dates.map(
-    (_, i) => (replies[3 + i] ?? {}) as Record<string, unknown>,
+    (_, i) => (replies[4 + i] ?? {}) as Record<string, unknown>,
   );
+
+  const openIncidents: Record<string, string> = {};
+  MONITORS.forEach((m, i) => {
+    if (openRaw[i]) openIncidents[m.id] = openRaw[i]!;
+  });
 
   const monitors: Record<string, MonitorStatus> = {};
   for (const m of MONITORS) {
@@ -106,5 +114,6 @@ export async function loadStatus(): Promise<{
     monitors,
     lastRun: runTimestamps.length ? Math.max(...runTimestamps) : null,
     events,
+    openIncidents,
   };
 }

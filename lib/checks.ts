@@ -1,4 +1,4 @@
-import { MONITORS, type Region } from "./monitors";
+import { MONITORS, REGIONS, type Region } from "./monitors";
 import { kv, K, DAY_TTL_SECONDS, EVENTS_MAX } from "./kv";
 
 export type CheckResult = {
@@ -21,6 +21,7 @@ export type StatusEvent = {
   region: Region;
   ok: boolean;
   status: number;
+  incidentId?: string;
 };
 
 export const CHECK_TIMEOUT_MS = 10_000;
@@ -95,6 +96,39 @@ export async function runChecks(region: Region): Promise<CheckResult[]> {
     };
   }
 
+  // Incident bookkeeping — permalink pages live off these records.
+  for (const e of events) {
+    if (!e.ok) {
+      const candidate = `${e.monitorId}-${now}`;
+      const created = await r.set(K.open(e.monitorId), candidate, { nx: true });
+      let id = candidate;
+      if (created === "OK" || created === null) {
+        if (created === "OK") {
+          await Promise.all([
+            r.hset(K.incident(id), {
+              id,
+              monitorId: e.monitorId,
+              startedAt: now,
+            }),
+            r.lpush(K.incidents, id),
+          ]);
+          await r.ltrim(K.incidents, 0, 499);
+        }
+        if (created === null) {
+          id = (await r.get<string>(K.open(e.monitorId))) ?? candidate;
+        }
+      }
+      e.incidentId = id;
+      await r.rpush(K.incidentEvents(id), JSON.stringify(e));
+    } else {
+      const id = await r.get<string>(K.open(e.monitorId));
+      if (id) {
+        e.incidentId = id;
+        await r.rpush(K.incidentEvents(id), JSON.stringify(e));
+      }
+    }
+  }
+
   const pipe = r.pipeline();
   pipe.hset(K.latest, latestUpdate);
   pipe.hset(K.lastRun, { [region]: now });
@@ -110,6 +144,20 @@ export async function runChecks(region: Region): Promise<CheckResult[]> {
     pipe.ltrim(K.events, 0, EVENTS_MAX - 1);
   }
   await pipe.exec();
+
+  // Close incidents whose monitor is now healthy in every region.
+  for (const e of events) {
+    if (!e.ok || !e.incidentId) continue;
+    const vals = await r.hmget<Record<string, LatestEntry | null>>(
+      K.latest,
+      ...REGIONS.map((rg) => `${e.monitorId}:${rg}`),
+    );
+    const allOk = Object.values(vals ?? {}).every((v) => v == null || v.ok);
+    if (allOk) {
+      await r.hset(K.incident(e.incidentId), { endedAt: now });
+      await r.del(K.open(e.monitorId));
+    }
+  }
 
   return results;
 }

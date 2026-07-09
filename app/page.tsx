@@ -64,9 +64,10 @@ function MonitorRow({
 export default async function Page() {
   let monitors: Record<string, MonitorStatus> = {};
   let lastRun: number | null = null;
+  let openIncidents: Record<string, string> = {};
   let loadError = false;
   try {
-    ({ monitors, lastRun } = await loadStatus());
+    ({ monitors, lastRun, openIncidents } = await loadStatus());
   } catch {
     loadError = true;
   }
@@ -117,7 +118,7 @@ export default async function Page() {
             </span>
           </div>
           {lastRun && (
-            <span className="hidden text-sm text-emerald-400/90 sm:block">
+            <span className="hidden text-sm text-zinc-400 sm:block">
               {utc(lastRun)}
             </span>
           )}
@@ -148,28 +149,38 @@ export default async function Page() {
                   const e = s?.latest[r];
                   return e && !e.ok;
                 });
-                return (
-                  <div
-                    key={m.id}
-                    className="flex items-center justify-between gap-3 px-5 py-3.5 text-sm"
-                  >
+                const incidentId = openIncidents[m.id];
+                const row = (
+                  <>
                     <div className="flex items-center gap-2.5">
                       <StatusDot health={health} />
-                      <a
-                        href={m.siteUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-medium text-zinc-100 underline-offset-4 hover:underline"
-                      >
+                      <span className="font-medium text-zinc-100">
                         {m.name}
-                      </a>
+                      </span>
                       <span className={HEALTH_META[health].text}>
                         {HEALTH_META[health].label.toLowerCase()}
                       </span>
                     </div>
                     <span className="text-xs text-zinc-500">
                       {regions.map((r) => REGION_LABELS[r]).join(", ")}
+                      {incidentId && <span className="ml-2 text-zinc-600">→</span>}
                     </span>
+                  </>
+                );
+                return incidentId ? (
+                  <a
+                    key={m.id}
+                    href={`/issues/${incidentId}`}
+                    className="flex items-center justify-between gap-3 px-5 py-3.5 text-sm transition-colors hover:bg-red-500/5"
+                  >
+                    {row}
+                  </a>
+                ) : (
+                  <div
+                    key={m.id}
+                    className="flex items-center justify-between gap-3 px-5 py-3.5 text-sm"
+                  >
+                    {row}
                   </div>
                 );
               })}

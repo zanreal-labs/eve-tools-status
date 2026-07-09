@@ -22,6 +22,10 @@ export const K = {
   day: (date: string) => `ets:day:${date}`, // hash: `${mid}:${region}:{ok|total|msSum}` → int
   suggestions: "ets:suggestions", // list of suggestion JSON
   rateLimit: (ipHash: string) => `ets:rl:${ipHash}`,
+  open: (monitorId: string) => `ets:open:${monitorId}`, // open incident id
+  incident: (id: string) => `ets:incident:${id}`, // hash: monitorId, startedAt, endedAt
+  incidentEvents: (id: string) => `ets:incident:${id}:events`, // list of StatusEvent JSON
+  incidents: "ets:incidents", // list of incident ids, newest first
 };
 
 export const DAY_TTL_SECONDS = 100 * 24 * 60 * 60;
