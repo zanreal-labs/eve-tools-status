@@ -152,7 +152,9 @@ function BannerFrame({
         {right}
       </div>
       <div className="mt-2 flex items-center justify-between gap-4 pl-9">
-        {subLeft ?? <span />}
+        {/* wrapper is always a flex item, so NextCheck stays pinned right
+            even when the inner content is display:none on desktop */}
+        <span>{subLeft}</span>
         <NextCheck />
       </div>
     </div>
