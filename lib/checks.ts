@@ -27,7 +27,7 @@ export const CHECK_TIMEOUT_MS = 10_000;
 export const USER_AGENT =
   "Mozilla/5.0 (compatible; EveToolsStatusBot/1.0; +https://eve-tools-status.com/docs)";
 
-async function checkOne(monitorId: string, url: string): Promise<CheckResult> {
+async function attempt(monitorId: string, url: string): Promise<CheckResult> {
   const started = Date.now();
   try {
     const res = await fetch(url, {
@@ -48,6 +48,14 @@ async function checkOne(monitorId: string, url: string): Promise<CheckResult> {
   } catch {
     return { monitorId, ok: false, status: 0, latencyMs: Date.now() - started };
   }
+}
+
+async function checkOne(monitorId: string, url: string): Promise<CheckResult> {
+  const first = await attempt(monitorId, url);
+  if (first.ok) return first;
+  // One retry after a short pause — a single slow round shouldn't page as down.
+  await new Promise((r) => setTimeout(r, 2000));
+  return attempt(monitorId, url);
 }
 
 export async function runChecks(region: Region): Promise<CheckResult[]> {
