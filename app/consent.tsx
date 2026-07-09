@@ -48,6 +48,7 @@ const theme = {
     consentBannerTag: { className: "ets-c15t-hide" },
     consentDialogTag: { className: "ets-c15t-hide" },
     consentWidgetTag: { className: "ets-c15t-hide" },
+    consentBanner: { className: "ets-c15t-banner" },
     consentBannerCard: { className: "ets-c15t-card" },
     consentBannerFooterSubGroup: { className: "ets-c15t-footrow" },
     consentDialog: { className: "ets-c15t-dialog" },

@@ -16,8 +16,14 @@
   color: #e4e4e7 !important;
 }
 
+/* banner shell spans the viewport — let clicks pass through the empty area */
+.ets-c15t-banner {
+  pointer-events: none !important;
+}
+
 /* banner card — bottom-right, padded, capped width */
 .ets-c15t-card {
+  pointer-events: auto !important;
   width: min(560px, calc(100vw - 32px)) !important;
   max-width: none !important;
   margin: 0 16px 16px auto !important;
