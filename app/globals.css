@@ -4,3 +4,102 @@
 .ets-c15t-hide {
   display: none !important;
 }
+
+/* ---- c15t consent surfaces — dark mono, matches the site ---- */
+
+.ets-c15t-card,
+.ets-c15t-dialog-card {
+  background: #18181b !important;
+  border: 1px solid #3f3f46 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6) !important;
+  color: #e4e4e7 !important;
+}
+
+/* banner card — bottom-right, padded, capped width */
+.ets-c15t-card {
+  width: min(560px, calc(100vw - 32px)) !important;
+  max-width: none !important;
+  margin: 0 16px 16px auto !important;
+  padding: 20px !important;
+}
+.ets-c15t-card:focus,
+.ets-c15t-card:focus-visible {
+  outline: none !important;
+}
+
+/* button rows — wrap, breathe, align right */
+.ets-c15t-footrow {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  justify-content: flex-end !important;
+  margin-top: 14px !important;
+}
+
+/* every c15t action button by its stable variant class */
+[class*="button-primary-filled"],
+[class*="button-neutral-stroke"],
+[class*="button-neutral-filled"],
+[class*="button-primary-stroke"] {
+  border-radius: 4px !important;
+  padding: 8px 18px !important;
+  font-family: inherit !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  cursor: pointer !important;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease !important;
+}
+[class*="button-primary-filled"] {
+  background: #22d3ee !important;
+  color: #09090b !important;
+  border: 1px solid #22d3ee !important;
+}
+[class*="button-primary-filled"]:hover {
+  background: #67e8f9 !important;
+  border-color: #67e8f9 !important;
+}
+[class*="button-neutral-stroke"],
+[class*="button-primary-stroke"],
+[class*="button-neutral-filled"] {
+  background: transparent !important;
+  color: #d4d4d8 !important;
+  border: 1px solid #52525b !important;
+}
+[class*="button-neutral-stroke"]:hover,
+[class*="button-primary-stroke"]:hover,
+[class*="button-neutral-filled"]:hover {
+  border-color: #a1a1aa !important;
+  color: #fafafa !important;
+}
+
+/* preferences dialog — centered modal above the c15t backdrop */
+.ets-c15t-dialog {
+  position: fixed !important;
+  inset: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 24px !important;
+  z-index: 1000000001 !important;
+  pointer-events: none !important;
+}
+.ets-c15t-dialog-card {
+  width: min(620px, calc(100vw - 32px)) !important;
+  max-width: none !important;
+  max-height: min(86vh, 720px) !important;
+  overflow-y: auto !important;
+  pointer-events: auto !important;
+  padding: 20px !important;
+}
+.ets-c15t-dialog-card:focus,
+.ets-c15t-dialog-card:focus-visible {
+  outline: none !important;
+}
+.ets-c15t-dialog-card .ets-c15t-footrow {
+  justify-content: center !important;
+}
