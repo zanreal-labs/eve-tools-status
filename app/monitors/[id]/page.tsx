@@ -1,13 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { connection } from "next/server";
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronRight, ExternalLink } from "lucide-react";
-import { CATEGORIES, MONITORS, REGION_LABELS } from "@/lib/monitors";
+import {
+  CATEGORIES,
+  MONITORS,
+  REGIONS,
+  REGION_LABELS,
+  type Region,
+} from "@/lib/monitors";
 import { loadMonitorDetail, HISTORY_DAYS } from "@/lib/status";
 import { UptimeBars, utc } from "../../ui";
-import { DetailSkeleton } from "../../skeletons";
+import { BarsSkeleton, EventRowSkeleton, StatSkeleton } from "../../skeletons";
 
 export function generateStaticParams() {
   return MONITORS.map((m) => ({ id: m.id }));
@@ -40,6 +46,14 @@ function durationText(startedAt: number, endedAt?: number): string {
   return `${h}h ${mins % 60}m`;
 }
 
+function Pulse({ className }: { className: string }) {
+  return <div className={`animate-pulse rounded-sm bg-zinc-900 ${className}`} />;
+}
+
+/* Static shell: heading, description, check config, section headings   */
+/* and one framed card per region (labels included). Data streams into  */
+/* fixed-size slots inside each frame — no layout shift.                */
+
 export default async function MonitorPage({
   params,
 }: {
@@ -49,8 +63,6 @@ export default async function MonitorPage({
   const monitor = MONITORS.find((m) => m.id === id);
   if (!monitor) notFound();
 
-  // Everything below the config line is live data streamed in via Suspense;
-  // the header, description and check config are part of the static shell.
   return (
     <div>
       <Link
@@ -74,6 +86,11 @@ export default async function MonitorPage({
         >
           <ExternalLink className="h-4 w-4" aria-hidden />
         </a>
+        <span className="flex h-5 items-center">
+          <Suspense fallback={<StatSkeleton textWidth="w-56" />}>
+            <HealthLine id={monitor.id} />
+          </Suspense>
+        </span>
       </div>
       <p className="text-sm text-zinc-500">
         {monitor.description}
@@ -86,57 +103,14 @@ export default async function MonitorPage({
           ` · daily maintenance ${String(Math.floor(monitor.maintenance.fromMinute / 60)).padStart(2, "0")}:${String(monitor.maintenance.fromMinute % 60).padStart(2, "0")}–${String(Math.floor(monitor.maintenance.toMinute / 60)).padStart(2, "0")}:${String(monitor.maintenance.toMinute % 60).padStart(2, "0")} UTC`}
       </p>
 
-      <Suspense fallback={<DetailSkeleton />}>
-        <MonitorLive id={monitor.id} />
-      </Suspense>
-    </div>
-  );
-}
-
-async function MonitorLive({ id }: { id: string }) {
-  await connection();
-  const detail = await loadMonitorDetail(id).catch(() => null);
-  if (!detail) {
-    return (
-      <div className="rounded-sm border border-zinc-800 bg-zinc-900/40 px-5 py-10 text-center text-sm text-zinc-500">
-        Status data unavailable.
-      </div>
-    );
-  }
-  const { regions, days, uptimePct, incidents } = detail;
-  const monitor = detail.monitor;
-
-  const present = regions.filter((r) => r.latest);
-  const failingRegions = regions.filter((r) => r.latest && !r.latest.ok);
-  const health =
-    present.length === 0 ? "unknown"
-    : failingRegions.length === present.length && failingRegions.length > 0 ? "down"
-    : failingRegions.length > 0 ? "degraded"
-    : present.some((r) => r.latest!.maint) ? "maintenance"
-    : "operational";
-  const healthText = {
-    operational: ["Operational", "text-emerald-400"],
-    maintenance: ["Planned maintenance", "text-cyan-400"],
-    degraded: ["Degraded", "text-amber-400"],
-    down: ["Down", "text-red-400"],
-    unknown: ["No data", "text-zinc-500"],
-  }[health] as [string, string];
-
-  return (
-    <div>
-      <div className="mb-6 flex flex-wrap items-center gap-3 text-sm">
-        <span className={healthText[1]}>{healthText[0]}</span>
-        {uptimePct != null && (
-          <span className="tabular-nums text-zinc-400">
-            {uptimePct.toFixed(2)}% over {HISTORY_DAYS} days
-          </span>
-        )}
-      </div>
-
       <h2 className="mb-2 text-xs font-medium uppercase tracking-widest text-zinc-500">
         Combined uptime · last {HISTORY_DAYS} days
       </h2>
-      <UptimeBars days={days} />
+      <div className="h-12">
+        <Suspense fallback={<BarsSkeleton />}>
+          <CombinedBars id={monitor.id} />
+        </Suspense>
+      </div>
       <div className="mb-10 mt-1.5 flex items-center justify-between text-xs text-zinc-500">
         <span>{HISTORY_DAYS} days ago</span>
         <span>today</span>
@@ -146,135 +120,240 @@ async function MonitorLive({ id }: { id: string }) {
         Probes by region
       </h2>
       <div className="mb-10 grid gap-4 sm:grid-cols-2">
-        {regions.map((rd) => {
-          const e = rd.latest;
-          return (
-            <div
-              key={rd.region}
-              className="rounded-sm border border-zinc-800 bg-zinc-900/40 px-5 py-4"
-            >
-              <div className="mb-2 flex items-center justify-between">
-                <span className="flex items-center gap-2 text-sm font-medium text-zinc-100">
-                  <span
-                    className={`inline-block h-2 w-2 rounded-full ${
-                      e
-                        ? e.maint
-                          ? "bg-cyan-400"
-                          : e.ok
-                            ? "bg-emerald-500"
-                            : "bg-red-500"
-                        : "bg-zinc-600"
-                    }`}
-                  />
-                  {REGION_LABELS[rd.region]}
-                  <span className="text-xs font-normal text-zinc-600">
-                    {rd.region}
-                  </span>
-                </span>
-                {rd.uptimePct != null && (
-                  <span className="text-xs tabular-nums text-zinc-400">
-                    {rd.uptimePct.toFixed(2)}%
-                  </span>
-                )}
-              </div>
-              <UptimeBars days={rd.days} className="h-6" />
-              <div className="mt-3 space-y-1 text-xs text-zinc-500">
-                {e ? (
-                  <>
-                    <div>
-                      last probe:{" "}
-                      <span
-                        className={
-                          e.maint
-                            ? "text-cyan-400"
-                            : e.ok
-                              ? "text-emerald-400"
-                              : "text-red-400"
-                        }
-                      >
-                        {e.maint
-                          ? "maintenance"
-                          : e.status > 0
-                            ? `HTTP ${e.status}`
-                            : "timeout"}
-                      </span>{" "}
-                      · <span className="tabular-nums">{e.ms}ms</span>
-                    </div>
-                    <div>checked {utc(e.ts)}</div>
-                  </>
-                ) : (
-                  <div>no probes yet</div>
-                )}
-                {rd.avgMs != null && (
-                  <div>
-                    avg response ({HISTORY_DAYS}d):{" "}
-                    <span className="tabular-nums text-zinc-400">
-                      {rd.avgMs}ms
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
+        {REGIONS.map((region) => (
+          <div
+            key={region}
+            className="rounded-sm border border-zinc-800 bg-zinc-900/40 px-5 py-4"
+          >
+            <Suspense fallback={<RegionCardFallback region={region} />}>
+              <RegionCard id={monitor.id} region={region} />
+            </Suspense>
+          </div>
+        ))}
       </div>
 
       <h2 className="mb-2 text-xs font-medium uppercase tracking-widest text-zinc-500">
         Incident history
       </h2>
-      {incidents.length === 0 ? (
-        <div className="rounded-sm border border-zinc-800 bg-zinc-900/40 px-5 py-8 text-center text-sm text-zinc-500">
-          No incidents recorded for {monitor.name}.
-        </div>
-      ) : (
-        <div className="divide-y divide-zinc-900 rounded-sm border border-zinc-800 bg-zinc-900/40">
-          {incidents.map((inc) => {
-            const ongoing = !inc.endedAt;
-            const isMaint = inc.kind === "maint";
-            return (
-              <Link
-                key={inc.id}
-                href={`/issues/${inc.id}`}
-                className="flex items-center justify-between gap-3 px-5 py-3.5 text-sm transition-colors hover:bg-zinc-800/40"
-              >
-                <span className="flex items-center gap-2.5">
-                  <span
-                    className={`inline-block h-2 w-2 rounded-full ${
-                      isMaint
-                        ? "bg-cyan-400"
-                        : ongoing
-                          ? "bg-red-500"
-                          : "bg-emerald-500"
-                    }`}
-                  />
-                  <span className="text-zinc-100">{utc(inc.startedAt)}</span>
-                  <span
-                    className={
-                      isMaint
-                        ? "text-cyan-400"
-                        : ongoing
-                          ? "text-red-400"
-                          : "text-zinc-500"
-                    }
-                  >
-                    {isMaint
-                      ? ongoing
-                        ? "planned maintenance · in progress"
-                        : `planned maintenance · ${durationText(inc.startedAt, inc.endedAt)}`
-                      : ongoing
-                        ? "ongoing"
-                        : `resolved · ${durationText(inc.startedAt, inc.endedAt)}`}
-                  </span>
-                </span>
-                <ChevronRight
-                  className="h-3.5 w-3.5 text-zinc-600"
-                  aria-hidden
-                />
-              </Link>
-            );
-          })}
-        </div>
+      <Suspense
+        fallback={
+          <div className="divide-y divide-zinc-900 rounded-sm border border-zinc-800 bg-zinc-900/40">
+            {[0, 1].map((i) => (
+              <EventRowSkeleton key={i} />
+            ))}
+          </div>
+        }
+      >
+        <IncidentList id={monitor.id} name={monitor.name} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function HealthLine({ id }: { id: string }) {
+  await connection();
+  const detail = await loadMonitorDetail(id).catch(() => null);
+  if (!detail) return <span className="text-sm text-zinc-500">No data</span>;
+  const { regions, uptimePct } = detail;
+  const present = regions.filter((r) => r.latest);
+  const failing = regions.filter((r) => r.latest && !r.latest.ok);
+  const health =
+    present.length === 0 ? "unknown"
+    : failing.length === present.length && failing.length > 0 ? "down"
+    : failing.length > 0 ? "degraded"
+    : present.some((r) => r.latest!.maint) ? "maintenance"
+    : "operational";
+  const [label, cls] = {
+    operational: ["Operational", "text-emerald-400"],
+    maintenance: ["Planned maintenance", "text-cyan-400"],
+    degraded: ["Degraded", "text-amber-400"],
+    down: ["Down", "text-red-400"],
+    unknown: ["No data", "text-zinc-500"],
+  }[health] as [string, string];
+  return (
+    <span className="flex items-center gap-3 text-sm">
+      <span className={cls}>{label}</span>
+      {uptimePct != null && (
+        <span className="tabular-nums text-zinc-400">
+          {uptimePct.toFixed(2)}% over {HISTORY_DAYS} days
+        </span>
       )}
+    </span>
+  );
+}
+
+async function CombinedBars({ id }: { id: string }) {
+  await connection();
+  const detail = await loadMonitorDetail(id).catch(() => null);
+  if (!detail) return <Pulse className="h-12 w-full" />;
+  return <UptimeBars days={detail.days} />;
+}
+
+function RegionCardHeader({
+  region,
+  dot,
+  right,
+}: {
+  region: Region;
+  dot: React.ReactNode;
+  right?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-2 flex items-center justify-between">
+      <span className="flex items-center gap-2 text-sm font-medium text-zinc-100">
+        {dot}
+        {REGION_LABELS[region]}
+        <span className="text-xs font-normal text-zinc-600">{region}</span>
+      </span>
+      {right}
+    </div>
+  );
+}
+
+function RegionCardFallback({ region }: { region: Region }) {
+  return (
+    <div>
+      <RegionCardHeader
+        region={region}
+        dot={
+          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-zinc-600" />
+        }
+      />
+      <BarsSkeleton className="h-6" />
+      <div className="mt-3 space-y-1.5">
+        <Pulse className="h-3 w-40" />
+        <Pulse className="h-3 w-48" />
+        <Pulse className="h-3 w-44" />
+      </div>
+    </div>
+  );
+}
+
+async function RegionCard({ id, region }: { id: string; region: Region }) {
+  await connection();
+  const detail = await loadMonitorDetail(id).catch(() => null);
+  const rd = detail?.regions.find((r) => r.region === region);
+  if (!rd) return <RegionCardFallback region={region} />;
+  const e = rd.latest;
+  return (
+    <div>
+      <RegionCardHeader
+        region={region}
+        dot={
+          <span
+            className={`inline-block h-2 w-2 rounded-full ${
+              e
+                ? e.maint
+                  ? "bg-cyan-400"
+                  : e.ok
+                    ? "bg-emerald-500"
+                    : "bg-red-500"
+                : "bg-zinc-600"
+            }`}
+          />
+        }
+        right={
+          rd.uptimePct != null ? (
+            <span className="text-xs tabular-nums text-zinc-400">
+              {rd.uptimePct.toFixed(2)}%
+            </span>
+          ) : undefined
+        }
+      />
+      <UptimeBars days={rd.days} className="h-6" />
+      <div className="mt-3 space-y-1 text-xs text-zinc-500">
+        {e ? (
+          <>
+            <div>
+              last probe:{" "}
+              <span
+                className={
+                  e.maint
+                    ? "text-cyan-400"
+                    : e.ok
+                      ? "text-emerald-400"
+                      : "text-red-400"
+                }
+              >
+                {e.maint
+                  ? "maintenance"
+                  : e.status > 0
+                    ? `HTTP ${e.status}`
+                    : "timeout"}
+              </span>{" "}
+              · <span className="tabular-nums">{e.ms}ms</span>
+            </div>
+            <div>checked {utc(e.ts)}</div>
+          </>
+        ) : (
+          <div>no probes yet</div>
+        )}
+        {rd.avgMs != null && (
+          <div>
+            avg response ({HISTORY_DAYS}d):{" "}
+            <span className="tabular-nums text-zinc-400">{rd.avgMs}ms</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+async function IncidentList({ id, name }: { id: string; name: string }) {
+  await connection();
+  const detail = await loadMonitorDetail(id).catch(() => null);
+  const incidents = detail?.incidents ?? [];
+  if (incidents.length === 0) {
+    return (
+      <div className="rounded-sm border border-zinc-800 bg-zinc-900/40 px-5 py-8 text-center text-sm text-zinc-500">
+        No incidents recorded for {name}.
+      </div>
+    );
+  }
+  return (
+    <div className="divide-y divide-zinc-900 rounded-sm border border-zinc-800 bg-zinc-900/40">
+      {incidents.map((inc) => {
+        const ongoing = !inc.endedAt;
+        const isMaint = inc.kind === "maint";
+        return (
+          <Link
+            key={inc.id}
+            href={`/issues/${inc.id}`}
+            className="flex items-center justify-between gap-3 px-5 py-3.5 text-sm transition-colors hover:bg-zinc-800/40"
+          >
+            <span className="flex items-center gap-2.5">
+              <span
+                className={`inline-block h-2 w-2 rounded-full ${
+                  isMaint
+                    ? "bg-cyan-400"
+                    : ongoing
+                      ? "bg-red-500"
+                      : "bg-emerald-500"
+                }`}
+              />
+              <span className="text-zinc-100">{utc(inc.startedAt)}</span>
+              <span
+                className={
+                  isMaint
+                    ? "text-cyan-400"
+                    : ongoing
+                      ? "text-red-400"
+                      : "text-zinc-500"
+                }
+              >
+                {isMaint
+                  ? ongoing
+                    ? "planned maintenance · in progress"
+                    : `planned maintenance · ${durationText(inc.startedAt, inc.endedAt)}`
+                  : ongoing
+                    ? "ongoing"
+                    : `resolved · ${durationText(inc.startedAt, inc.endedAt)}`}
+              </span>
+            </span>
+            <ChevronRight className="h-3.5 w-3.5 text-zinc-600" aria-hidden />
+          </Link>
+        );
+      })}
     </div>
   );
 }

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { DetailSkeleton } from "../../skeletons";
+import { IncidentSkeleton } from "../../skeletons";
 import { MONITORS, REGION_LABELS, type Region } from "@/lib/monitors";
 import { kv, K } from "@/lib/kv";
 import type { StatusEvent } from "@/lib/checks";
@@ -86,7 +86,7 @@ export default function IncidentPage({
         All events
       </Link>
       <div className="mt-4">
-        <Suspense fallback={<DetailSkeleton />}>
+        <Suspense fallback={<IncidentSkeleton />}>
           <IncidentBody params={params} />
         </Suspense>
       </div>

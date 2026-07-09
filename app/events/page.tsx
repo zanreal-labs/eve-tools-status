@@ -5,7 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { MONITORS, REGION_LABELS, type Region } from "@/lib/monitors";
 import { loadStatus, type StatusEvent } from "@/lib/status";
 import { utc } from "../ui";
-import { ListSkeleton } from "../skeletons";
+import { GroupedListSkeleton } from "../skeletons";
 
 
 const MONITOR_NAMES: Record<string, string> = Object.fromEntries(
@@ -159,7 +159,7 @@ export default function EventsPage() {
         Outages and recoveries detected by the checks — grouped per incident,
         most recent first.
       </p>
-      <Suspense fallback={<ListSkeleton rows={6} />}>
+      <Suspense fallback={<GroupedListSkeleton />}>
         <EventsLog />
       </Suspense>
     </div>
