@@ -19,6 +19,7 @@ import {
   type Health,
 } from "./ui";
 import { NextCheck } from "./next-check";
+import { BarsSkeleton, StatSkeleton } from "./skeletons";
 
 /* ------------------------------------------------------------------ */
 /* Static shell: banner frame, category headings, monitor names/links, */
@@ -78,21 +79,13 @@ function MonitorRowShell({ monitor }: { monitor: Monitor }) {
           </a>
         </span>
         <span className="flex h-5 items-center">
-          <Suspense
-            fallback={
-              <span className="inline-block h-4 w-24 animate-pulse rounded-sm bg-zinc-900" />
-            }
-          >
+          <Suspense fallback={<StatSkeleton textWidth="w-16" />}>
             <RowStats id={monitor.id} />
           </Suspense>
         </span>
       </div>
       <div className="h-12">
-        <Suspense
-          fallback={
-            <div className="h-12 w-full animate-pulse rounded-sm bg-zinc-900" />
-          }
-        >
+        <Suspense fallback={<BarsSkeleton />}>
           <RowBars id={monitor.id} />
         </Suspense>
       </div>

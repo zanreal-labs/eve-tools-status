@@ -10,6 +10,7 @@ import {
 } from "@/lib/monitors";
 import { loadStatus } from "@/lib/status";
 import { HEALTH_META, RegionChips, StatusDot, monitorHealth } from "../ui";
+import { StatSkeleton } from "../skeletons";
 
 /* Static shell: category cards, names, descriptions, check URLs and   */
 /* region chip frames. Health labels and chip values stream in.        */
@@ -80,11 +81,7 @@ function MonitorCard({ monitor }: { monitor: Monitor }) {
           </a>
         </span>
         <span className="flex h-5 items-center">
-          <Suspense
-            fallback={
-              <span className="inline-block h-4 w-24 animate-pulse rounded-sm bg-zinc-900" />
-            }
-          >
+          <Suspense fallback={<StatSkeleton textWidth="w-24" />}>
             <CardHealth id={monitor.id} />
           </Suspense>
         </span>

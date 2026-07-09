@@ -13,6 +13,7 @@ import {
 } from "@/lib/monitors";
 import { loadMonitorDetail, HISTORY_DAYS } from "@/lib/status";
 import { UptimeBars, utc } from "../../ui";
+import { BarsSkeleton, EventRowSkeleton, StatSkeleton } from "../../skeletons";
 
 export function generateStaticParams() {
   return MONITORS.map((m) => ({ id: m.id }));
@@ -86,7 +87,7 @@ export default async function MonitorPage({
           <ExternalLink className="h-4 w-4" aria-hidden />
         </a>
         <span className="flex h-5 items-center">
-          <Suspense fallback={<Pulse className="h-4 w-56" />}>
+          <Suspense fallback={<StatSkeleton textWidth="w-56" />}>
             <HealthLine id={monitor.id} />
           </Suspense>
         </span>
@@ -106,7 +107,7 @@ export default async function MonitorPage({
         Combined uptime · last {HISTORY_DAYS} days
       </h2>
       <div className="h-12">
-        <Suspense fallback={<Pulse className="h-12 w-full" />}>
+        <Suspense fallback={<BarsSkeleton />}>
           <CombinedBars id={monitor.id} />
         </Suspense>
       </div>
@@ -138,9 +139,7 @@ export default async function MonitorPage({
         fallback={
           <div className="divide-y divide-zinc-900 rounded-sm border border-zinc-800 bg-zinc-900/40">
             {[0, 1].map((i) => (
-              <div key={i} className="flex items-center px-5 py-3.5">
-                <Pulse className="h-4 w-64" />
-              </div>
+              <EventRowSkeleton key={i} />
             ))}
           </div>
         }
@@ -220,7 +219,7 @@ function RegionCardFallback({ region }: { region: Region }) {
           <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-zinc-600" />
         }
       />
-      <Pulse className="h-6 w-full" />
+      <BarsSkeleton className="h-6" />
       <div className="mt-3 space-y-1.5">
         <Pulse className="h-3 w-40" />
         <Pulse className="h-3 w-48" />
