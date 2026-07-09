@@ -162,6 +162,8 @@ export async function runChecks(region: Region): Promise<CheckResult[]> {
   pipe.hset(K.lastRun, { [region]: now });
   const dayKey = K.day(date);
   for (const res of results) {
+    // Planned-maintenance probes don't count towards availability at all.
+    if (res.maint) continue;
     pipe.hincrby(dayKey, `${res.monitorId}:${region}:total`, 1);
     if (res.ok) pipe.hincrby(dayKey, `${res.monitorId}:${region}:ok`, 1);
     pipe.hincrby(dayKey, `${res.monitorId}:${region}:msSum`, res.latencyMs);

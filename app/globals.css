@@ -21,12 +21,12 @@
   pointer-events: none !important;
 }
 
-/* banner card — bottom-right, padded, capped width */
+/* banner card — bottom-left, equal 16px gaps on every side */
 .ets-c15t-card {
   pointer-events: auto !important;
   width: min(560px, calc(100vw - 32px)) !important;
   max-width: none !important;
-  margin: 0 16px 16px auto !important;
+  margin: 0 16px 16px 16px !important;
   padding: 20px !important;
 }
 .ets-c15t-card:focus,

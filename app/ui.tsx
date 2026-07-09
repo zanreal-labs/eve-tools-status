@@ -3,20 +3,27 @@ import {
   CircleDashed,
   CircleX,
   TriangleAlert,
+  Wrench,
 } from "lucide-react";
 import { REGIONS, REGION_LABELS } from "@/lib/monitors";
 import type { DayStat, MonitorStatus } from "@/lib/status";
 
-export type Health = "operational" | "degraded" | "down" | "unknown";
+export type Health =
+  | "operational"
+  | "maintenance"
+  | "degraded"
+  | "down"
+  | "unknown";
 
 export function monitorHealth(s: MonitorStatus | undefined): Health {
   if (!s) return "unknown";
   const entries = REGIONS.map((r) => s.latest[r]).filter(Boolean);
   if (entries.length === 0) return "unknown";
   const failing = entries.filter((e) => !e!.ok).length;
-  if (failing === 0) return "operational";
-  if (failing === entries.length) return "down";
-  return "degraded";
+  if (failing === entries.length && failing > 0) return "down";
+  if (failing > 0) return "degraded";
+  if (entries.some((e) => e!.maint)) return "maintenance";
+  return "operational";
 }
 
 export const HEALTH_META: Record<
@@ -27,6 +34,11 @@ export const HEALTH_META: Record<
     label: "Operational",
     dot: "bg-emerald-500",
     text: "text-emerald-400",
+  },
+  maintenance: {
+    label: "Planned maintenance",
+    dot: "bg-cyan-400",
+    text: "text-cyan-400",
   },
   degraded: { label: "Degraded", dot: "bg-amber-500", text: "text-amber-400" },
   down: { label: "Down", dot: "bg-red-500", text: "text-red-400" },
@@ -76,6 +88,7 @@ export function StatusDot({ health }: { health: Health }) {
 
 const HEALTH_ICONS = {
   operational: CircleCheck,
+  maintenance: Wrench,
   degraded: TriangleAlert,
   down: CircleX,
   unknown: CircleDashed,

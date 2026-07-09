@@ -46,14 +46,17 @@ export default async function MonitorPage({
   const { monitor, regions, days, uptimePct, incidents, openIncidentId } =
     detail;
 
+  const present = regions.filter((r) => r.latest);
   const failingRegions = regions.filter((r) => r.latest && !r.latest.ok);
   const health =
-    regions.every((r) => !r.latest) ? "unknown"
-    : failingRegions.length === 0 ? "operational"
-    : failingRegions.length === regions.filter((r) => r.latest).length ? "down"
-    : "degraded";
+    present.length === 0 ? "unknown"
+    : failingRegions.length === present.length && failingRegions.length > 0 ? "down"
+    : failingRegions.length > 0 ? "degraded"
+    : present.some((r) => r.latest!.maint) ? "maintenance"
+    : "operational";
   const healthText = {
     operational: ["Operational", "text-emerald-400"],
+    maintenance: ["Planned maintenance", "text-cyan-400"],
     degraded: ["Degraded", "text-amber-400"],
     down: ["Down", "text-red-400"],
     unknown: ["No data", "text-zinc-500"],

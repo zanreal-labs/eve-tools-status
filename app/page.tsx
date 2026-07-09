@@ -98,6 +98,10 @@ export default async function Page() {
       text: "All Systems Operational",
       cls: "border-emerald-500/40 bg-emerald-500/5",
     },
+    maintenance: {
+      text: "Planned Maintenance",
+      cls: "border-cyan-500/40 bg-cyan-500/5",
+    },
     degraded: {
       text: "Some Systems Degraded",
       cls: "border-amber-500/40 bg-amber-500/5",
