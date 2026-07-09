@@ -61,14 +61,7 @@ export const CATEGORIES: Category[] = [
         siteUrl: "https://eve-kill.com/",
         description: "Killboard & battle intel",
       },
-      {
-        id: "brevetools",
-        name: "BR EVE Tools",
-        url: "https://br.evetools.org/",
-        siteUrl: "https://br.evetools.org/",
-        description: "Battle report generator",
-      },
-    ],
+],
   },
   {
     id: "market",

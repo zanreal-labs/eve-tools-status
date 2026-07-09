@@ -23,6 +23,8 @@ export default async function EventsPage() {
   let loadError = false;
   try {
     ({ events } = await loadStatus());
+    // Hide events for monitors that have since been removed.
+    events = events.filter((e) => e.monitorId in MONITOR_NAMES);
   } catch {
     loadError = true;
   }
