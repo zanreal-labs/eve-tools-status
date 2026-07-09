@@ -7,6 +7,7 @@ import { SuggestTool } from "./suggest-tool";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://eve-tools-status.com"),
   title: "EVE Tools Status",
   description:
     "Availability of EVE Online community tools, checked every 15 minutes from 4 regions.",

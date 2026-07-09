@@ -49,14 +49,6 @@ export default function DocsPage() {
           ZanReal
         </a>{" "}
         and is not affiliated with CCP Games or any of the monitored projects.
-        Source code:{" "}
-        <a
-          href="https://github.com/zanreal-labs/eve-tools-status"
-          className="text-zinc-100 underline underline-offset-4"
-        >
-          zanreal-labs/eve-tools-status
-        </a>
-        .
       </p>
 
       <H2>How we check</H2>
@@ -100,21 +92,21 @@ export default function DocsPage() {
       <p className="mt-3 text-zinc-500">
         We do not fetch robots.txt because we only request one fixed URL that
         you can inspect on the Monitors page — but if you prefer we not check
-        your service at all, open an issue on GitHub or use the form below and
-        we will remove it.
+        your service at all, use the form below and we will remove it.
       </p>
 
       <H2>Contact</H2>
       <p>
-        GitHub issues on{" "}
+        For takedown requests, whitelisting questions, or suggesting a
+        different health endpoint for your tool, use the form below or reach us
+        via{" "}
         <a
-          href="https://github.com/zanreal-labs/eve-tools-status/issues"
+          href="https://zanreal.com/contact"
           className="text-zinc-100 underline underline-offset-4"
         >
-          zanreal-labs/eve-tools-status
-        </a>{" "}
-        are the fastest route — for takedown requests, whitelisting questions,
-        or suggesting a different health endpoint for your tool.
+          zanreal.com/contact
+        </a>
+        .
       </p>
     </div>
   );

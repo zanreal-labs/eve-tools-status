@@ -25,7 +25,7 @@ export type StatusEvent = {
 
 export const CHECK_TIMEOUT_MS = 10_000;
 export const USER_AGENT =
-  "Mozilla/5.0 (compatible; EveToolsStatusBot/1.0; +https://eve-tools-status.vercel.app/docs)";
+  "Mozilla/5.0 (compatible; EveToolsStatusBot/1.0; +https://eve-tools-status.com/docs)";
 
 async function checkOne(monitorId: string, url: string): Promise<CheckResult> {
   const started = Date.now();

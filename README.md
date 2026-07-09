@@ -1,6 +1,6 @@
 # EVE Tools Status
 
-Status page for EVE Online community tools — https://eve-tools-status.vercel.app
+Status page for EVE Online community tools — https://eve-tools-status.com
 
 25 monitors across 6 categories (core services, killboards, market & industry,
 maps & intel, wormholes, reference), checked every 15 minutes from 4 Vercel
