@@ -1,13 +1,14 @@
 import { CATEGORIES, type Monitor } from "@/lib/monitors";
 import { loadStatus, HISTORY_DAYS, type MonitorStatus } from "@/lib/status";
 import {
-  CheckBadge,
   HEALTH_META,
+  StatusDot,
   UptimeBars,
   monitorHealth,
   utc,
   type Health,
 } from "./ui";
+import { Clock } from "./clock";
 
 export const dynamic = "force-dynamic";
 
@@ -31,9 +32,11 @@ function MonitorRow({
         >
           {monitor.name} <span className="text-xs text-zinc-600">↗</span>
         </a>
-        <span className="flex items-center gap-2 text-sm tabular-nums text-zinc-300">
+        <span
+          className={`flex items-center gap-2 text-sm tabular-nums ${HEALTH_META[health].text}`}
+        >
           {s?.uptimePct != null ? `${s.uptimePct.toFixed(2)}%` : "—"}
-          <CheckBadge health={health} />
+          <StatusDot health={health} />
         </span>
       </div>
       {s ? (
@@ -72,40 +75,33 @@ export default async function Page() {
           ? "unknown"
           : "operational";
 
-  const banner: Record<Health, { text: string; cls: string; badge: string }> = {
+  const banner: Record<Health, { text: string; cls: string }> = {
     operational: {
       text: "All Systems Operational",
       cls: "border-emerald-500/40 bg-emerald-500/5",
-      badge: "bg-emerald-500 text-zinc-950",
     },
     degraded: {
       text: "Some Systems Degraded",
       cls: "border-amber-500/40 bg-amber-500/5",
-      badge: "bg-amber-500 text-zinc-950",
     },
     down: {
       text: "Service Outage Detected",
       cls: "border-red-500/40 bg-red-500/5",
-      badge: "bg-red-500 text-zinc-950",
     },
     unknown: {
       text: loadError ? "Status Data Unavailable" : "Awaiting First Checks",
       cls: "border-zinc-800 bg-zinc-900/40",
-      badge: "bg-zinc-700 text-zinc-300",
     },
   };
 
   return (
     <div>
+      <Clock />
       <div
         className={`mb-10 flex items-center justify-between gap-4 rounded-lg border px-5 py-4 ${banner[overall].cls}`}
       >
         <div className="flex items-center gap-3">
-          <span
-            className={`inline-flex h-6 w-6 items-center justify-center rounded-md text-sm font-bold ${banner[overall].badge}`}
-          >
-            {overall === "operational" ? "✓" : overall === "unknown" ? "·" : "!"}
-          </span>
+          <StatusDot health={overall} />
           <span className="text-lg font-semibold tracking-tight text-zinc-100">
             {banner[overall].text}
           </span>

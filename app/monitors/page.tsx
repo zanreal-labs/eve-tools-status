@@ -1,6 +1,6 @@
 import { CATEGORIES } from "@/lib/monitors";
 import { loadStatus, type MonitorStatus } from "@/lib/status";
-import { CheckBadge, HEALTH_META, RegionChips, monitorHealth } from "../ui";
+import { HEALTH_META, RegionChips, StatusDot, monitorHealth } from "../ui";
 import { SuggestTool } from "../suggest-tool";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +44,7 @@ export default async function MonitorsPage() {
                       </a>
                       <span className={`flex items-center gap-2 text-sm ${meta.text}`}>
                         {meta.label}
-                        <CheckBadge health={health} />
+                        <StatusDot health={health} />
                       </span>
                     </div>
                     <p className="mb-3 text-xs text-zinc-500">{m.description}</p>

@@ -60,21 +60,11 @@ export function UptimeBars({
   );
 }
 
-export function CheckBadge({ health }: { health: Health }) {
-  const bg =
-    health === "operational"
-      ? "bg-emerald-500 text-zinc-950"
-      : health === "degraded"
-        ? "bg-amber-500 text-zinc-950"
-        : health === "down"
-          ? "bg-red-500 text-zinc-950"
-          : "bg-zinc-700 text-zinc-400";
+export function StatusDot({ health }: { health: Health }) {
   return (
     <span
-      className={`inline-flex h-4 w-4 items-center justify-center rounded-[4px] text-[10px] font-bold ${bg}`}
-    >
-      {health === "operational" ? "✓" : health === "unknown" ? "·" : "!"}
-    </span>
+      className={`inline-block h-2 w-2 rounded-full ${HEALTH_META[health].dot}`}
+    />
   );
 }
 
