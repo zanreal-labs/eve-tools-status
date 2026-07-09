@@ -99,8 +99,11 @@ function GroupRow({ g }: { g: EventGroup }) {
         )}
       </div>
       <span className="flex items-center gap-1.5 whitespace-nowrap text-xs tabular-nums text-zinc-500">
-        {utc(g.firstTs, false)}
-        {g.lastTs !== g.firstTs && ` – ${utc(g.lastTs, false)}`}
+        {g.resolved
+          ? utc(g.firstTs, false) === utc(g.lastTs, false)
+            ? utc(g.firstTs, false)
+            : `${utc(g.firstTs, false)} – ${utc(g.lastTs, false)}`
+          : `since ${utc(g.firstTs, false)}`}
         {g.incidentId && (
           <ChevronRight className="h-3.5 w-3.5 text-zinc-600" aria-hidden />
         )}

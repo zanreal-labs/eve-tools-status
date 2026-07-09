@@ -15,7 +15,7 @@ import {
   utc,
   type Health,
 } from "./ui";
-import { Clock } from "./clock";
+import Link from "next/link";
 import { NextCheck } from "./next-check";
 
 export const dynamic = "force-dynamic";
@@ -31,16 +31,24 @@ function MonitorRow({
   return (
     <div className="py-5">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <a
-          href={monitor.siteUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          title={monitor.description}
-          className="inline-flex items-center gap-1.5 text-[15px] font-medium text-zinc-100 underline-offset-4 hover:underline"
-        >
-          {monitor.name}
-          <ExternalLink className="h-3.5 w-3.5 text-zinc-600" aria-hidden />
-        </a>
+        <span className="inline-flex items-center gap-2">
+          <Link
+            href={`/monitors/${monitor.id}`}
+            title={monitor.description}
+            className="text-[15px] font-medium text-zinc-100 underline-offset-4 hover:underline"
+          >
+            {monitor.name}
+          </Link>
+          <a
+            href={monitor.siteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Open ${monitor.name}`}
+            className="text-zinc-600 transition-colors hover:text-zinc-300"
+          >
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+          </a>
+        </span>
         <span
           className={`flex items-center gap-2 text-sm tabular-nums ${HEALTH_META[health].text}`}
         >
@@ -106,7 +114,6 @@ export default async function Page() {
 
   return (
     <div>
-      <Clock />
       <div
         className={`mb-10 rounded-sm border px-5 py-4 ${banner[overall].cls}`}
       >

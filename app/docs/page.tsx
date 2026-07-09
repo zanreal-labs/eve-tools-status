@@ -83,7 +83,9 @@ export default function DocsPage() {
         even though it is fine for players. If you run a monitored tool, an
         allow rule on the User-Agent token fixes it:
       </p>
-      <p className="mb-2 text-zinc-400">Cloudflare (WAF custom rule → Skip):</p>
+      <p className="mb-2 text-zinc-400">
+        Cloudflare (WAF custom rule with the Skip action):
+      </p>
       <Code>(http.user_agent contains &quot;EveToolsStatusBot&quot;)</Code>
       <p className="mb-2 mt-4 text-zinc-400">nginx:</p>
       <Code>{`if ($http_user_agent ~ "EveToolsStatusBot") {

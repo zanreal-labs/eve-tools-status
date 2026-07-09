@@ -1,4 +1,4 @@
-import { MONITORS, REGIONS, type Region } from "./monitors";
+import { MONITORS, REGIONS, type Monitor, type Region } from "./monitors";
 import { kv, K } from "./kv";
 import type { LatestEntry, StatusEvent } from "./checks";
 
@@ -115,5 +115,125 @@ export async function loadStatus(): Promise<{
     lastRun: runTimestamps.length ? Math.max(...runTimestamps) : null,
     events,
     openIncidents,
+  };
+}
+
+export type RegionDayStat = DayStat & { avgMs: number | null };
+
+export type RegionDetail = {
+  region: Region;
+  latest: LatestEntry | null;
+  days: RegionDayStat[];
+  uptimePct: number | null;
+  avgMs: number | null;
+};
+
+export type IncidentSummary = {
+  id: string;
+  startedAt: number;
+  endedAt?: number;
+};
+
+export type MonitorDetail = {
+  monitor: Monitor;
+  regions: RegionDetail[];
+  days: DayStat[]; // aggregated across regions
+  uptimePct: number | null;
+  openIncidentId: string | null;
+  incidents: IncidentSummary[];
+};
+
+export async function loadMonitorDetail(
+  monitorId: string,
+): Promise<MonitorDetail | null> {
+  const monitor = MONITORS.find((m) => m.id === monitorId);
+  if (!monitor) return null;
+
+  const r = kv();
+  const dates = Array.from({ length: HISTORY_DAYS }, (_, i) =>
+    dateStr(HISTORY_DAYS - 1 - i),
+  );
+
+  const pipe = r.pipeline();
+  pipe.hmget(K.latest, ...REGIONS.map((rg) => `${monitorId}:${rg}`));
+  pipe.get(K.open(monitorId));
+  pipe.lrange(K.incidents, 0, 499);
+  for (const date of dates) pipe.hgetall(K.day(date));
+  const replies = await pipe.exec<unknown[]>();
+
+  const latestRaw = (replies[0] ?? {}) as Record<string, unknown>;
+  const openIncidentId = (replies[1] as string | null) ?? null;
+  const incidentIds = ((replies[2] ?? []) as string[]).filter((id) =>
+    id.startsWith(`${monitorId}-`),
+  );
+  const dayHashes = dates.map(
+    (_, i) => (replies[3 + i] ?? {}) as Record<string, unknown>,
+  );
+
+  const regions: RegionDetail[] = REGIONS.map((region) => {
+    const latest = toEntry(latestRaw[`${monitorId}:${region}`]);
+    const days: RegionDayStat[] = dates.map((date, i) => {
+      const h = dayHashes[i];
+      const total = Number(h[`${monitorId}:${region}:total`] ?? 0);
+      const ok = Number(h[`${monitorId}:${region}:ok`] ?? 0);
+      const msSum = Number(h[`${monitorId}:${region}:msSum`] ?? 0);
+      return {
+        date,
+        total,
+        ok,
+        fail: total - ok,
+        avgMs: total > 0 ? Math.round(msSum / total) : null,
+      };
+    });
+    const total = days.reduce((s, d) => s + d.total, 0);
+    const okCount = days.reduce((s, d) => s + d.ok, 0);
+    const msSum = days.reduce(
+      (s, d) => s + (d.avgMs != null ? d.avgMs * d.total : 0),
+      0,
+    );
+    return {
+      region,
+      latest,
+      days,
+      uptimePct: total > 0 ? (okCount / total) * 100 : null,
+      avgMs: total > 0 ? Math.round(msSum / total) : null,
+    };
+  });
+
+  const days: DayStat[] = dates.map((date, i) => {
+    let total = 0;
+    let ok = 0;
+    for (const rd of regions) {
+      total += rd.days[i].total;
+      ok += rd.days[i].ok;
+    }
+    return { date, total, ok, fail: total - ok };
+  });
+  const grandTotal = days.reduce((s, d) => s + d.total, 0);
+  const grandOk = days.reduce((s, d) => s + d.ok, 0);
+
+  let incidents: IncidentSummary[] = [];
+  const wanted = incidentIds.slice(0, 15);
+  if (wanted.length > 0) {
+    const ipipe = r.pipeline();
+    for (const id of wanted) ipipe.hgetall(K.incident(id));
+    const metas = await ipipe.exec<Record<string, unknown>[]>();
+    incidents = metas
+      .map((meta, i) => ({
+        id: wanted[i],
+        startedAt: Number(meta?.startedAt ?? 0),
+        endedAt: meta?.endedAt ? Number(meta.endedAt) : undefined,
+      }))
+      .filter((x) => x.startedAt > 0)
+      .sort((a, b) => b.startedAt - a.startedAt);
+  }
+
+  return {
+    monitor,
+    regions,
+    days,
+    uptimePct: grandTotal > 0 ? (grandOk / grandTotal) * 100 : null,
+    openIncidentId,
+    incidents,
   };
 }

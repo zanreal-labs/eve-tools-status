@@ -99,7 +99,13 @@ export default async function IncidentPage({
           }`}
         />
         <h1 className="text-lg font-semibold tracking-tight text-zinc-100">
-          {tool} outage
+          <Link
+            href={`/monitors/${meta.monitorId}`}
+            className="underline-offset-4 hover:underline"
+          >
+            {tool}
+          </Link>{" "}
+          outage
         </h1>
         <span
           className={`rounded-sm border px-2 py-0.5 text-xs uppercase tracking-wider ${

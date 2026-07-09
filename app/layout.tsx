@@ -3,6 +3,7 @@ import Script from "next/script";
 import { Activity } from "lucide-react";
 import { REGIONS, REGION_LABELS } from "@/lib/monitors";
 import { Nav } from "./nav";
+import { Clock } from "./clock";
 import { SuggestTool } from "./suggest-tool";
 import { Consent, CookiePreferencesButton } from "./consent";
 import "./globals.css";
@@ -74,7 +75,10 @@ export default function RootLayout({
           </a>
           <Nav />
         </header>
-        <main className="mx-auto max-w-3xl px-4 pb-16 pt-6">{children}</main>
+        <main className="mx-auto max-w-3xl px-4 pb-16 pt-6">
+          <Clock />
+          {children}
+        </main>
         <section className="mx-auto max-w-3xl px-4 pb-10">
           <SuggestTool />
         </section>

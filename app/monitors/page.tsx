@@ -1,5 +1,6 @@
 import { CATEGORIES } from "@/lib/monitors";
 import { loadStatus, type MonitorStatus } from "@/lib/status";
+import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { HEALTH_META, RegionChips, StatusDot, monitorHealth } from "../ui";
 
@@ -34,15 +35,23 @@ export default async function MonitorsPage() {
                 return (
                   <div key={m.id} className="px-5 py-4">
                     <div className="mb-1 flex items-center justify-between gap-3">
-                      <a
-                        href={m.siteUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 font-medium text-zinc-100 underline-offset-4 hover:underline"
-                      >
-                        {m.name}
-                        <ExternalLink className="h-3.5 w-3.5 text-zinc-600" aria-hidden />
-                      </a>
+                      <span className="inline-flex items-center gap-2">
+                        <Link
+                          href={`/monitors/${m.id}`}
+                          className="font-medium text-zinc-100 underline-offset-4 hover:underline"
+                        >
+                          {m.name}
+                        </Link>
+                        <a
+                          href={m.siteUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={`Open ${m.name}`}
+                          className="text-zinc-600 transition-colors hover:text-zinc-300"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                        </a>
+                      </span>
                       <span className={`flex items-center gap-2 text-sm ${meta.text}`}>
                         {meta.label}
                         <StatusDot health={health} />
