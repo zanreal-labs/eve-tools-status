@@ -8,7 +8,7 @@ const ZONES: { label: string; tz: string | null; accent?: boolean }[] = [
   { label: "US West", tz: "America/Los_Angeles" },
   { label: "Europe", tz: "Europe/Berlin" },
   { label: "Oceania", tz: "Australia/Sydney" },
-  { label: "Local ★", tz: null, accent: true },
+  { label: "Local", tz: null, accent: true },
 ];
 
 function timeIn(tz: string | null, now: Date): string {

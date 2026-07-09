@@ -1,4 +1,9 @@
-import { CATEGORIES, type Monitor } from "@/lib/monitors";
+import {
+  CATEGORIES,
+  REGIONS,
+  REGION_LABELS,
+  type Monitor,
+} from "@/lib/monitors";
 import { loadStatus, HISTORY_DAYS, type MonitorStatus } from "@/lib/status";
 import {
   HEALTH_META,
@@ -112,6 +117,52 @@ export default async function Page() {
           </span>
         )}
       </div>
+
+      {(() => {
+        const failing = CATEGORIES.flatMap((c) => c.monitors)
+          .map((m) => ({ m, s: monitors[m.id], health: monitorHealth(monitors[m.id]) }))
+          .filter(({ health }) => health === "down" || health === "degraded");
+        if (failing.length === 0) return null;
+        return (
+          <section className="mb-10">
+            <h2 className="mb-1 text-xs font-medium uppercase tracking-widest text-red-400">
+              Active Issues
+            </h2>
+            <div className="divide-y divide-zinc-900 rounded-lg border border-red-500/30 bg-red-500/5">
+              {failing.map(({ m, s, health }) => {
+                const regions = REGIONS.filter((r) => {
+                  const e = s?.latest[r];
+                  return e && !e.ok;
+                });
+                return (
+                  <div
+                    key={m.id}
+                    className="flex items-center justify-between gap-3 px-5 py-3.5 text-sm"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <StatusDot health={health} />
+                      <a
+                        href={m.siteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-zinc-100 underline-offset-4 hover:underline"
+                      >
+                        {m.name}
+                      </a>
+                      <span className={HEALTH_META[health].text}>
+                        {HEALTH_META[health].label.toLowerCase()}
+                      </span>
+                    </div>
+                    <span className="text-xs text-zinc-500">
+                      {regions.map((r) => REGION_LABELS[r]).join(", ")}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })()}
 
       <div className="space-y-10">
         {CATEGORIES.map((cat) => (
