@@ -62,6 +62,31 @@ export function ListSkeleton({ rows = 6 }: { rows?: number }) {
   );
 }
 
+/** Mirrors the events log: day-heading + bordered row group per section. */
+export function GroupedListSkeleton({
+  sections = [4, 2],
+}: {
+  sections?: number[];
+}) {
+  return (
+    <div aria-busy="true" aria-label="Loading events" className="space-y-8">
+      {sections.map((rows, s) => (
+        <section key={s}>
+          {/* day label slot — same text-xs line box as the real heading */}
+          <div className="mb-2 flex h-4 items-center">
+            <span className="h-3 w-24 animate-pulse rounded-sm bg-zinc-900" />
+          </div>
+          <div className="divide-y divide-zinc-900 rounded-sm border border-zinc-800 bg-zinc-900/40">
+            {Array.from({ length: rows }, (_, i) => (
+              <EventRowSkeleton key={i} />
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
 /** Mirrors the incident permapage body: header, meta, regions, timeline. */
 export function IncidentSkeleton() {
   return (
