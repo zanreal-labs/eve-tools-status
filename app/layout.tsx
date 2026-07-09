@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { REGIONS, REGION_LABELS } from "@/lib/monitors";
 import { Nav } from "./nav";
+import { SuggestTool } from "./suggest-tool";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -28,6 +29,12 @@ export default function RootLayout({
           <Nav />
         </header>
         <main className="mx-auto max-w-3xl px-4 pb-16 pt-6">{children}</main>
+        <section className="mx-auto max-w-3xl px-4 pb-10">
+          <h2 className="mb-2 text-xs font-medium uppercase tracking-widest text-zinc-500">
+            Missing a tool?
+          </h2>
+          <SuggestTool />
+        </section>
         <footer className="mx-auto max-w-3xl space-y-2 border-t border-zinc-800 px-4 py-6 text-xs text-zinc-500">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span>

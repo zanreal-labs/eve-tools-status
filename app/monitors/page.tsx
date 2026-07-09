@@ -1,7 +1,6 @@
 import { CATEGORIES } from "@/lib/monitors";
 import { loadStatus, type MonitorStatus } from "@/lib/status";
 import { HEALTH_META, RegionChips, StatusDot, monitorHealth } from "../ui";
-import { SuggestTool } from "../suggest-tool";
 
 export const dynamic = "force-dynamic";
 
@@ -56,12 +55,6 @@ export default async function MonitorsPage() {
           </section>
         ))}
 
-        <section>
-          <h2 className="mb-2 text-xs font-medium uppercase tracking-widest text-zinc-500">
-            Missing something?
-          </h2>
-          <SuggestTool />
-        </section>
       </div>
     </div>
   );
