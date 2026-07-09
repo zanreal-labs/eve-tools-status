@@ -13,7 +13,7 @@ import {
 } from "@/lib/status";
 import { SuggestTool } from "./suggest-tool";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 type Health = "operational" | "degraded" | "down" | "unknown";
 

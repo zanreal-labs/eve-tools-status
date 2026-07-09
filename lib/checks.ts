@@ -1,13 +1,5 @@
 import { MONITORS, type Region } from "./monitors";
-import {
-  PATHS,
-  readJson,
-  writeJson,
-  HISTORY_RETENTION_DAYS,
-  type LatestFile,
-  type HistoryFile,
-  type StatusEvent,
-} from "./store";
+import { kv, K, DAY_TTL_SECONDS, EVENTS_MAX } from "./kv";
 
 export type CheckResult = {
   monitorId: string;
@@ -16,8 +8,22 @@ export type CheckResult = {
   latencyMs: number;
 };
 
+export type LatestEntry = {
+  ok: boolean;
+  status: number;
+  ms: number;
+  ts: number;
+};
+
+export type StatusEvent = {
+  ts: number;
+  monitorId: string;
+  region: Region;
+  ok: boolean;
+  status: number;
+};
+
 const CHECK_TIMEOUT_MS = 10_000;
-const EVENTS_MAX = 100;
 const USER_AGENT = "eve-tools-status/1.0 (uptime monitor; +https://eve-tools-status.vercel.app)";
 
 async function checkOne(monitorId: string, url: string): Promise<CheckResult> {
@@ -44,62 +50,57 @@ async function checkOne(monitorId: string, url: string): Promise<CheckResult> {
 }
 
 export async function runChecks(region: Region): Promise<CheckResult[]> {
-  const [results, prevLatest, prevHistory, prevEvents] = await Promise.all([
+  const r = kv();
+  const fields = MONITORS.map((m) => `${m.id}:${region}`);
+  const [results, prevRaw] = await Promise.all([
     Promise.all(MONITORS.map((m) => checkOne(m.id, m.url))),
-    readJson<LatestFile>(PATHS.latest(region)),
-    readJson<HistoryFile>(PATHS.history(region)),
-    readJson<StatusEvent[]>(PATHS.events(region)),
+    r.hmget<Record<string, LatestEntry | null>>(K.latest, ...fields),
   ]);
 
   const now = Date.now();
   const date = new Date(now).toISOString().slice(0, 10);
 
-  // Latest snapshot for this region.
-  const latest: LatestFile = { ts: now, results: {} };
-  for (const r of results) {
-    latest.results[r.monitorId] = { ok: r.ok, status: r.status, ms: r.latencyMs };
-  }
-
   // Status transitions vs the previous run in this region.
-  const newEvents: StatusEvent[] = [];
-  for (const r of results) {
-    const prevOk = prevLatest?.results[r.monitorId]?.ok ?? null;
-    const isTransition = prevOk === null ? !r.ok : prevOk !== r.ok;
+  const events: StatusEvent[] = [];
+  for (const res of results) {
+    const prevOk = prevRaw?.[`${res.monitorId}:${region}`]?.ok ?? null;
+    const isTransition = prevOk === null ? !res.ok : prevOk !== res.ok;
     if (isTransition) {
-      newEvents.push({
+      events.push({
         ts: now,
-        monitorId: r.monitorId,
+        monitorId: res.monitorId,
         region,
-        ok: r.ok,
-        status: r.status,
+        ok: res.ok,
+        status: res.status,
       });
     }
   }
-  const events = [...newEvents, ...(prevEvents ?? [])].slice(0, EVENTS_MAX);
 
-  // Daily aggregates, pruned to the retention window.
-  const history: HistoryFile = prevHistory ?? {};
-  const cutoff = new Date(now - HISTORY_RETENTION_DAYS * 86_400_000)
-    .toISOString()
-    .slice(0, 10);
-  for (const d of Object.keys(history)) {
-    if (d < cutoff) delete history[d];
-  }
-  const day = (history[date] ??= {});
-  for (const r of results) {
-    const agg = (day[r.monitorId] ??= { ok: 0, total: 0, msSum: 0 });
-    agg.total += 1;
-    if (r.ok) agg.ok += 1;
-    agg.msSum += r.latencyMs;
+  const latestUpdate: Record<string, LatestEntry> = {};
+  for (const res of results) {
+    latestUpdate[`${res.monitorId}:${region}`] = {
+      ok: res.ok,
+      status: res.status,
+      ms: res.latencyMs,
+      ts: now,
+    };
   }
 
-  await Promise.all([
-    writeJson(PATHS.latest(region), latest),
-    writeJson(PATHS.history(region), history),
-    newEvents.length > 0
-      ? writeJson(PATHS.events(region), events)
-      : Promise.resolve(),
-  ]);
+  const pipe = r.pipeline();
+  pipe.hset(K.latest, latestUpdate);
+  pipe.hset(K.lastRun, { [region]: now });
+  const dayKey = K.day(date);
+  for (const res of results) {
+    pipe.hincrby(dayKey, `${res.monitorId}:${region}:total`, 1);
+    if (res.ok) pipe.hincrby(dayKey, `${res.monitorId}:${region}:ok`, 1);
+    pipe.hincrby(dayKey, `${res.monitorId}:${region}:msSum`, res.latencyMs);
+  }
+  pipe.expire(dayKey, DAY_TTL_SECONDS);
+  if (events.length > 0) {
+    pipe.lpush(K.events, ...events.map((e) => JSON.stringify(e)));
+    pipe.ltrim(K.events, 0, EVENTS_MAX - 1);
+  }
+  await pipe.exec();
 
   return results;
 }

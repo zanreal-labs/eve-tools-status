@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { list } from "@vercel/blob";
 import { authorized } from "@/lib/checks";
+import { kv, K } from "@/lib/kv";
 
 export const dynamic = "force-dynamic";
 
@@ -8,17 +8,22 @@ export async function GET(req: Request) {
   if (!authorized(req)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  const [state, suggestions] = await Promise.all([
-    list({ prefix: "state/", limit: 100 }),
-    list({ prefix: "suggestions/", limit: 500 }),
-  ]);
+  const r = kv();
+  const pipe = r.pipeline();
+  pipe.ping();
+  pipe.hlen(K.latest);
+  pipe.hgetall(K.lastRun);
+  pipe.llen(K.events);
+  pipe.lrange(K.suggestions, 0, 49);
+  pipe.keys("ets:*");
+  const [ping, latestLen, lastRun, eventCount, suggestions, keys] =
+    await pipe.exec<[string, number, Record<string, string>, number, unknown[], string[]]>();
   return NextResponse.json({
-    state: state.blobs.map((b) => ({
-      pathname: b.pathname,
-      size: b.size,
-      uploadedAt: b.uploadedAt,
-    })),
-    suggestionCount: suggestions.blobs.length,
-    suggestionUrls: suggestions.blobs.slice(0, 50).map((b) => b.url),
+    ping,
+    latestLen,
+    lastRun,
+    eventCount,
+    suggestions,
+    keys: keys.slice(0, 30),
   });
 }

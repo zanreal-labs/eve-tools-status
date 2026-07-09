@@ -1,32 +1,14 @@
 import { MONITORS, REGIONS, type Region } from "./monitors";
-import {
-  PATHS,
-  readAllState,
-  type LatestFile,
-  type HistoryFile,
-  type StatusEvent as StoreEvent,
-} from "./store";
+import { kv, K } from "./kv";
+import type { LatestEntry, StatusEvent } from "./checks";
 
-export type LatestEntry = {
-  ok: boolean;
-  status: number;
-  ms: number;
-  ts: number;
-};
+export type { LatestEntry, StatusEvent };
 
 export type DayStat = {
   date: string;
   total: number;
   ok: number;
   fail: number;
-};
-
-export type StatusEvent = {
-  ts: number;
-  monitorId: string;
-  region: Region;
-  ok: boolean;
-  status: number;
 };
 
 export type MonitorStatus = {
@@ -43,53 +25,57 @@ function dateStr(offsetDays: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+function toEntry(v: unknown): LatestEntry | null {
+  if (v == null) return null;
+  if (typeof v === "string") {
+    try {
+      return JSON.parse(v);
+    } catch {
+      return null;
+    }
+  }
+  return v as LatestEntry;
+}
+
 export async function loadStatus(): Promise<{
   monitors: Record<string, MonitorStatus>;
   lastRun: number | null;
   events: StatusEvent[];
 }> {
-  const state = await readAllState();
+  const r = kv();
   const dates = Array.from({ length: HISTORY_DAYS }, (_, i) =>
     dateStr(HISTORY_DAYS - 1 - i),
   );
 
-  const latestByRegion: Partial<Record<Region, LatestFile>> = {};
-  const historyByRegion: Partial<Record<Region, HistoryFile>> = {};
-  let events: StatusEvent[] = [];
+  const pipe = r.pipeline();
+  pipe.hgetall(K.latest);
+  pipe.hgetall(K.lastRun);
+  pipe.lrange(K.events, 0, 19);
+  for (const date of dates) pipe.hgetall(K.day(date));
+  const replies = await pipe.exec<unknown[]>();
 
-  for (const region of REGIONS) {
-    const latest = state.get(PATHS.latest(region)) as LatestFile | undefined;
-    if (latest) latestByRegion[region] = latest;
-    const history = state.get(PATHS.history(region)) as HistoryFile | undefined;
-    if (history) historyByRegion[region] = history;
-    const regionEvents = state.get(PATHS.events(region)) as
-      | StoreEvent[]
-      | undefined;
-    if (regionEvents) events.push(...(regionEvents as StatusEvent[]));
-  }
-
-  events = events.sort((a, b) => b.ts - a.ts).slice(0, 20);
+  const latestRaw = (replies[0] ?? {}) as Record<string, unknown>;
+  const lastRunRaw = (replies[1] ?? {}) as Record<string, unknown>;
+  const eventsRaw = (replies[2] ?? []) as unknown[];
+  const dayHashes = dates.map(
+    (_, i) => (replies[3 + i] ?? {}) as Record<string, unknown>,
+  );
 
   const monitors: Record<string, MonitorStatus> = {};
   for (const m of MONITORS) {
     const latest: Partial<Record<Region, LatestEntry>> = {};
     for (const region of REGIONS) {
-      const file = latestByRegion[region];
-      const r = file?.results[m.id];
-      if (file && r) {
-        latest[region] = { ok: r.ok, status: r.status, ms: r.ms, ts: file.ts };
-      }
+      const e = toEntry(latestRaw[`${m.id}:${region}`]);
+      if (e) latest[region] = e;
     }
 
-    const days: DayStat[] = dates.map((date) => {
+    const days: DayStat[] = dates.map((date, i) => {
+      const h = dayHashes[i];
       let total = 0;
       let ok = 0;
       for (const region of REGIONS) {
-        const agg = historyByRegion[region]?.[date]?.[m.id];
-        if (agg) {
-          total += agg.total;
-          ok += agg.ok;
-        }
+        total += Number(h[`${m.id}:${region}:total`] ?? 0);
+        ok += Number(h[`${m.id}:${region}:ok`] ?? 0);
       }
       return { date, total, ok, fail: total - ok };
     });
@@ -104,10 +90,18 @@ export async function loadStatus(): Promise<{
     };
   }
 
-  const runTimestamps = Object.values(latestByRegion)
-    .map((f) => f?.ts ?? 0)
-    .filter(Boolean);
+  const events: StatusEvent[] = [];
+  for (const raw of eventsRaw) {
+    if (typeof raw === "string") {
+      try {
+        events.push(JSON.parse(raw));
+      } catch {}
+    } else if (raw && typeof raw === "object") {
+      events.push(raw as StatusEvent);
+    }
+  }
 
+  const runTimestamps = Object.values(lastRunRaw).map(Number).filter(Boolean);
   return {
     monitors,
     lastRun: runTimestamps.length ? Math.max(...runTimestamps) : null,
