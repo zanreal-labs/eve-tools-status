@@ -23,8 +23,9 @@ export type StatusEvent = {
   status: number;
 };
 
-const CHECK_TIMEOUT_MS = 10_000;
-const USER_AGENT = "eve-tools-status/1.0 (uptime monitor; +https://eve-tools-status.vercel.app)";
+export const CHECK_TIMEOUT_MS = 10_000;
+export const USER_AGENT =
+  "Mozilla/5.0 (compatible; EveToolsStatusBot/1.0; +https://eve-tools-status.vercel.app/docs)";
 
 async function checkOne(monitorId: string, url: string): Promise<CheckResult> {
   const started = Date.now();

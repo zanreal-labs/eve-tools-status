@@ -46,7 +46,10 @@ export default async function MonitorsPage() {
                         <StatusDot health={health} />
                       </span>
                     </div>
-                    <p className="mb-3 text-xs text-zinc-500">{m.description}</p>
+                    <p className="mb-1 text-xs text-zinc-500">{m.description}</p>
+                    <p className="mb-3 break-all text-[11px] text-zinc-600">
+                      GET {m.url}
+                    </p>
                     <RegionChips s={s} />
                   </div>
                 );
