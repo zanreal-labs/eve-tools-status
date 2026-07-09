@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
+import { REGIONS, REGION_LABELS } from "@/lib/monitors";
+import { Nav } from "./nav";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,8 +17,37 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className="min-h-screen bg-zinc-950 text-zinc-100 antialiased">
-        {children}
+      <body className="min-h-screen bg-[#0a0a0a] font-mono text-zinc-200 antialiased">
+        <header className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-5">
+          <a href="/" className="flex items-center gap-2.5">
+            <span className="inline-block h-3 w-3 rounded-sm bg-emerald-500" />
+            <span className="text-sm font-semibold tracking-tight">
+              EVE Tools Status
+            </span>
+          </a>
+          <Nav />
+        </header>
+        <main className="mx-auto max-w-3xl px-4 pb-16 pt-6">{children}</main>
+        <footer className="mx-auto max-w-3xl space-y-2 border-t border-zinc-800 px-4 py-6 text-xs text-zinc-500">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span>
+              Checks every 15 min from{" "}
+              {REGIONS.map((r) => REGION_LABELS[r]).join(", ")}
+            </span>
+            <span>Not affiliated with CCP Games</span>
+          </div>
+          <div>
+            Made &amp; powered by{" "}
+            <a
+              href="https://zanreal.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-zinc-300 underline-offset-4 hover:underline"
+            >
+              ZanReal
+            </a>
+          </div>
+        </footer>
         <Analytics />
       </body>
     </html>
