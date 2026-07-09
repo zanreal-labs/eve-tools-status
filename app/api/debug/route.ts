@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { authorized } from "@/lib/checks";
 import { kv, K } from "@/lib/kv";
 
-export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   if (!authorized(req)) {

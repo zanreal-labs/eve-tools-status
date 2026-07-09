@@ -3,7 +3,6 @@ import { authorized } from "@/lib/checks";
 import { REGIONS } from "@/lib/monitors";
 
 export const maxDuration = 150;
-export const dynamic = "force-dynamic";
 
 function baseUrl(): string {
   if (process.env.STATUS_BASE_URL) return process.env.STATUS_BASE_URL;

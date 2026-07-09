@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { MONITORS, REGIONS, type Monitor, type Region } from "./monitors";
 import { kv, K } from "./kv";
 import type { LatestEntry, StatusEvent } from "./checks";
@@ -37,12 +38,12 @@ function toEntry(v: unknown): LatestEntry | null {
   return v as LatestEntry;
 }
 
-export async function loadStatus(): Promise<{
+const loadStatusImpl = async (): Promise<{
   monitors: Record<string, MonitorStatus>;
   lastRun: number | null;
   events: StatusEvent[];
   openIncidents: Record<string, string>;
-}> {
+}> => {
   const r = kv();
   const dates = Array.from({ length: HISTORY_DAYS }, (_, i) =>
     dateStr(HISTORY_DAYS - 1 - i),
@@ -116,7 +117,10 @@ export async function loadStatus(): Promise<{
     events,
     openIncidents,
   };
-}
+};
+
+/** Request-deduped: multiple Suspense islands share one KV round-trip. */
+export const loadStatus = cache(loadStatusImpl);
 
 export type RegionDayStat = DayStat & { avgMs: number | null };
 
@@ -144,9 +148,9 @@ export type MonitorDetail = {
   incidents: IncidentSummary[];
 };
 
-export async function loadMonitorDetail(
+const loadMonitorDetailImpl = async (
   monitorId: string,
-): Promise<MonitorDetail | null> {
+): Promise<MonitorDetail | null> => {
   const monitor = MONITORS.find((m) => m.id === monitorId);
   if (!monitor) return null;
 
@@ -238,4 +242,6 @@ export async function loadMonitorDetail(
     openIncidentId,
     incidents,
   };
-}
+};
+
+export const loadMonitorDetail = cache(loadMonitorDetailImpl);
