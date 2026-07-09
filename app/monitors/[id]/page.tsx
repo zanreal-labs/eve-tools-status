@@ -199,7 +199,8 @@ export default async function MonitorPage({
       ) : (
         <div className="divide-y divide-zinc-900 rounded-sm border border-zinc-800 bg-zinc-900/40">
           {incidents.map((inc) => {
-            const ongoing = !inc.endedAt && inc.id === openIncidentId;
+            const ongoing = !inc.endedAt;
+            const isMaint = inc.kind === "maint";
             return (
               <Link
                 key={inc.id}
@@ -209,16 +210,30 @@ export default async function MonitorPage({
                 <span className="flex items-center gap-2.5">
                   <span
                     className={`inline-block h-2 w-2 rounded-full ${
-                      ongoing ? "bg-red-500" : "bg-emerald-500"
+                      isMaint
+                        ? "bg-cyan-400"
+                        : ongoing
+                          ? "bg-red-500"
+                          : "bg-emerald-500"
                     }`}
                   />
                   <span className="text-zinc-100">{utc(inc.startedAt)}</span>
                   <span
-                    className={ongoing ? "text-red-400" : "text-zinc-500"}
+                    className={
+                      isMaint
+                        ? "text-cyan-400"
+                        : ongoing
+                          ? "text-red-400"
+                          : "text-zinc-500"
+                    }
                   >
-                    {ongoing
-                      ? "ongoing"
-                      : `resolved · ${durationText(inc.startedAt, inc.endedAt)}`}
+                    {isMaint
+                      ? ongoing
+                        ? "planned maintenance · in progress"
+                        : `planned maintenance · ${durationText(inc.startedAt, inc.endedAt)}`
+                      : ongoing
+                        ? "ongoing"
+                        : `resolved · ${durationText(inc.startedAt, inc.endedAt)}`}
                   </span>
                 </span>
                 <ChevronRight

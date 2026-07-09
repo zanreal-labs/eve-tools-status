@@ -24,6 +24,8 @@ export type StatusEvent = {
   ok: boolean;
   status: number;
   incidentId?: string;
+  /** Planned-maintenance event: ok=false → started, ok=true → ended. */
+  maint?: boolean;
 };
 
 export const CHECK_TIMEOUT_MS = 10_000;
@@ -100,16 +102,23 @@ export async function runChecks(region: Region): Promise<CheckResult[]> {
   // Status transitions vs the previous run in this region.
   const events: StatusEvent[] = [];
   for (const res of results) {
-    const prevOk = prevRaw?.[`${res.monitorId}:${region}`]?.ok ?? null;
-    const isTransition = prevOk === null ? !res.ok : prevOk !== res.ok;
-    if (isTransition) {
-      events.push({
-        ts: now,
-        monitorId: res.monitorId,
-        region,
-        ok: res.ok,
-        status: res.status,
-      });
+    const prev = prevRaw?.[`${res.monitorId}:${region}`] ?? null;
+    const prevOk = prev?.ok ?? null;
+    const prevMaint = prev?.maint ?? false;
+    const base = {
+      ts: now,
+      monitorId: res.monitorId,
+      region,
+      status: res.status,
+    };
+    if (res.maint) {
+      if (!prevMaint) events.push({ ...base, ok: false, maint: true }); // maintenance started
+    } else if (prevMaint) {
+      if (res.ok) events.push({ ...base, ok: true, maint: true }); // maintenance ended
+      else events.push({ ...base, ok: false }); // real outage after the window
+    } else {
+      const isTransition = prevOk === null ? !res.ok : prevOk !== res.ok;
+      if (isTransition) events.push({ ...base, ok: res.ok });
     }
   }
 
@@ -125,31 +134,32 @@ export async function runChecks(region: Region): Promise<CheckResult[]> {
   }
 
   // Incident bookkeeping — permalink pages live off these records.
+  // Maintenance and outage incidents use separate open pointers and id
+  // prefixes ("<mid>-m<ts>" vs "<mid>-<ts>").
   for (const e of events) {
+    const openKey = e.maint ? K.openMaint(e.monitorId) : K.open(e.monitorId);
     if (!e.ok) {
-      const candidate = `${e.monitorId}-${now}`;
-      const created = await r.set(K.open(e.monitorId), candidate, { nx: true });
+      const candidate = `${e.monitorId}-${e.maint ? "m" : ""}${now}`;
+      const created = await r.set(openKey, candidate, { nx: true });
       let id = candidate;
-      if (created === "OK" || created === null) {
-        if (created === "OK") {
-          await Promise.all([
-            r.hset(K.incident(id), {
-              id,
-              monitorId: e.monitorId,
-              startedAt: now,
-            }),
-            r.lpush(K.incidents, id),
-          ]);
-          await r.ltrim(K.incidents, 0, 499);
-        }
-        if (created === null) {
-          id = (await r.get<string>(K.open(e.monitorId))) ?? candidate;
-        }
+      if (created === "OK") {
+        await Promise.all([
+          r.hset(K.incident(id), {
+            id,
+            monitorId: e.monitorId,
+            startedAt: now,
+            ...(e.maint ? { kind: "maint" } : {}),
+          }),
+          r.lpush(K.incidents, id),
+        ]);
+        await r.ltrim(K.incidents, 0, 499);
+      } else {
+        id = (await r.get<string>(openKey)) ?? candidate;
       }
       e.incidentId = id;
       await r.rpush(K.incidentEvents(id), JSON.stringify(e));
     } else {
-      const id = await r.get<string>(K.open(e.monitorId));
+      const id = await r.get<string>(openKey);
       if (id) {
         e.incidentId = id;
         await r.rpush(K.incidentEvents(id), JSON.stringify(e));
@@ -182,10 +192,19 @@ export async function runChecks(region: Region): Promise<CheckResult[]> {
       K.latest,
       ...REGIONS.map((rg) => `${e.monitorId}:${rg}`),
     );
-    const allOk = Object.values(vals ?? {}).every((v) => v == null || v.ok);
-    if (allOk) {
-      await r.hset(K.incident(e.incidentId), { endedAt: now });
-      await r.del(K.open(e.monitorId));
+    const entries = Object.values(vals ?? {});
+    if (e.maint) {
+      const noneInMaint = entries.every((v) => v == null || !v.maint);
+      if (noneInMaint) {
+        await r.hset(K.incident(e.incidentId), { endedAt: now });
+        await r.del(K.openMaint(e.monitorId));
+      }
+    } else {
+      const allOk = entries.every((v) => v == null || v.ok);
+      if (allOk) {
+        await r.hset(K.incident(e.incidentId), { endedAt: now });
+        await r.del(K.open(e.monitorId));
+      }
     }
   }
 

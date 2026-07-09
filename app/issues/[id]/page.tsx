@@ -14,9 +14,10 @@ type IncidentMeta = {
   monitorId: string;
   startedAt: number;
   endedAt?: number;
+  kind?: "maint";
 };
 
-const ID_RE = /^[a-z0-9]+-\d+$/;
+const ID_RE = /^[a-z0-9]+-m?\d+$/;
 
 async function loadIncident(id: string) {
   if (!ID_RE.test(id)) return null;
@@ -59,10 +60,17 @@ export async function generateMetadata({
     MONITORS.find((m) => m.id === data.meta.monitorId)?.name ??
     data.meta.monitorId;
   const date = new Date(Number(data.meta.startedAt)).toISOString().slice(0, 10);
-  const resolved = data.meta.endedAt ? "resolved outage" : "ongoing outage";
+  const isMaint = data.meta.kind === "maint";
+  const state = data.meta.endedAt
+    ? isMaint
+      ? "completed planned maintenance"
+      : "resolved outage"
+    : isMaint
+      ? "ongoing planned maintenance"
+      : "ongoing outage";
   return {
-    title: `${tool} ${resolved} — ${date} | EVE Tools Status`,
-    description: `${tool} availability incident on ${date}: detected by EVE Tools Status checks from 4 regions. Duration: ${durationText(Number(data.meta.startedAt), data.meta.endedAt ? Number(data.meta.endedAt) : undefined)}.`,
+    title: `${tool} ${state} — ${date} | EVE Tools Status`,
+    description: `${tool} ${isMaint ? "planned maintenance" : "availability incident"} on ${date}: detected by EVE Tools Status checks from 4 regions. Duration: ${durationText(Number(data.meta.startedAt), data.meta.endedAt ? Number(data.meta.endedAt) : undefined)}.`,
   };
 }
 
@@ -80,6 +88,7 @@ export default async function IncidentPage({
   const startedAt = Number(meta.startedAt);
   const endedAt = meta.endedAt ? Number(meta.endedAt) : undefined;
   const resolved = Boolean(endedAt);
+  const isMaint = meta.kind === "maint";
   const affected = [...new Set(events.filter((e) => !e.ok).map((e) => e.region))];
 
   return (
@@ -95,7 +104,7 @@ export default async function IncidentPage({
       <div className="mb-1 mt-4 flex items-center gap-3">
         <span
           className={`inline-block h-2.5 w-2.5 rounded-full ${
-            resolved ? "bg-emerald-500" : "bg-red-500"
+            isMaint ? "bg-cyan-400" : resolved ? "bg-emerald-500" : "bg-red-500"
           }`}
         />
         <h1 className="text-lg font-semibold tracking-tight text-zinc-100">
@@ -105,24 +114,33 @@ export default async function IncidentPage({
           >
             {tool}
           </Link>{" "}
-          outage
+          {isMaint ? "planned maintenance" : "outage"}
         </h1>
         <span
           className={`rounded-sm border px-2 py-0.5 text-xs uppercase tracking-wider ${
-            resolved
-              ? "border-emerald-500/40 text-emerald-400"
-              : "border-red-500/40 text-red-400"
+            isMaint
+              ? "border-cyan-500/40 text-cyan-400"
+              : resolved
+                ? "border-emerald-500/40 text-emerald-400"
+                : "border-red-500/40 text-red-400"
           }`}
         >
-          {resolved ? "Resolved" : "Ongoing"}
+          {isMaint
+            ? resolved
+              ? "Completed"
+              : "In progress"
+            : resolved
+              ? "Resolved"
+              : "Ongoing"}
         </span>
       </div>
       <p className="mb-8 text-sm text-zinc-500">
         {monitor?.description}
         {monitor && " · "}
-        detected {utc(startedAt)}
-        {resolved && ` · resolved ${utc(endedAt!)}`} · duration{" "}
-        {durationText(startedAt, endedAt)}
+        {isMaint ? "started" : "detected"} {utc(startedAt)}
+        {resolved &&
+          ` · ${isMaint ? "completed" : "resolved"} ${utc(endedAt!)}`}{" "}
+        · duration {durationText(startedAt, endedAt)}
       </p>
 
       <h2 className="mb-2 text-xs font-medium uppercase tracking-widest text-zinc-500">
@@ -151,15 +169,31 @@ export default async function IncidentPage({
             <div className="flex items-center gap-2.5">
               <span
                 className={`inline-block h-2 w-2 rounded-full ${
-                  e.ok ? "bg-emerald-500" : "bg-red-500"
+                  e.maint
+                    ? "bg-cyan-400"
+                    : e.ok
+                      ? "bg-emerald-500"
+                      : "bg-red-500"
                 }`}
               />
-              <span className={e.ok ? "text-emerald-400" : "text-red-400"}>
-                {e.ok
-                  ? "recovered"
-                  : e.status > 0
-                    ? `down (HTTP ${e.status})`
-                    : "down (timeout)"}
+              <span
+                className={
+                  e.maint
+                    ? "text-cyan-400"
+                    : e.ok
+                      ? "text-emerald-400"
+                      : "text-red-400"
+                }
+              >
+                {e.maint
+                  ? e.ok
+                    ? "maintenance ended"
+                    : "maintenance started"
+                  : e.ok
+                    ? "recovered"
+                    : e.status > 0
+                      ? `down (HTTP ${e.status})`
+                      : "down (timeout)"}
               </span>
               <span className="text-xs text-zinc-500">
                 from {REGION_LABELS[e.region as Region] ?? e.region}

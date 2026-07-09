@@ -132,6 +132,7 @@ export type IncidentSummary = {
   id: string;
   startedAt: number;
   endedAt?: number;
+  kind?: "maint";
 };
 
 export type MonitorDetail = {
@@ -223,6 +224,7 @@ export async function loadMonitorDetail(
         id: wanted[i],
         startedAt: Number(meta?.startedAt ?? 0),
         endedAt: meta?.endedAt ? Number(meta.endedAt) : undefined,
+        kind: meta?.kind === "maint" ? ("maint" as const) : undefined,
       }))
       .filter((x) => x.startedAt > 0)
       .sort((a, b) => b.startedAt - a.startedAt);

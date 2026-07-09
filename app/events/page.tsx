@@ -19,6 +19,7 @@ type EventGroup = {
   lastTs: number;
   regions: string[];
   resolved: boolean;
+  maint: boolean;
 };
 
 function groupEvents(events: StatusEvent[]): EventGroup[] {
@@ -37,9 +38,11 @@ function groupEvents(events: StatusEvent[]): EventGroup[] {
         lastTs: e.ts,
         regions: [],
         resolved: true,
+        maint: false,
       };
       groups.set(key, g);
     }
+    if (e.maint) g.maint = true;
     g.events.push(e);
     g.firstTs = Math.min(g.firstTs, e.ts);
     g.lastTs = Math.max(g.lastTs, e.ts);
@@ -81,14 +84,32 @@ function GroupRow({ g }: { g: EventGroup }) {
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
         <span
           className={`inline-block h-2 w-2 rounded-full ${
-            g.resolved ? "bg-emerald-500" : "bg-red-500"
+            g.maint
+              ? "bg-cyan-400"
+              : g.resolved
+                ? "bg-emerald-500"
+                : "bg-red-500"
           }`}
         />
         <span className="font-medium text-zinc-100">
           {MONITOR_NAMES[g.monitorId] ?? g.monitorId}
         </span>
-        <span className={g.resolved ? "text-emerald-400" : "text-red-400"}>
-          {g.resolved ? `outage resolved (${reason})` : `down (${reason})`}
+        <span
+          className={
+            g.maint
+              ? "text-cyan-400"
+              : g.resolved
+                ? "text-emerald-400"
+                : "text-red-400"
+          }
+        >
+          {g.maint
+            ? g.resolved
+              ? "planned maintenance completed"
+              : "planned maintenance in progress"
+            : g.resolved
+              ? `outage resolved (${reason})`
+              : `down (${reason})`}
         </span>
         {g.regions.length > 0 && (
           <span className="text-xs text-zinc-500">
