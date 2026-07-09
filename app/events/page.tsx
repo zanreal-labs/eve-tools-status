@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { connection } from "next/server";
+import { Suspense } from "react";
 import { ChevronRight } from "lucide-react";
 import { MONITORS, REGION_LABELS, type Region } from "@/lib/monitors";
 import { loadStatus, type StatusEvent } from "@/lib/status";
 import { utc } from "../ui";
+import { ListSkeleton } from "../skeletons";
 
-export const dynamic = "force-dynamic";
 
 const MONITOR_NAMES: Record<string, string> = Object.fromEntries(
   MONITORS.map((m) => [m.id, m.name]),
@@ -146,7 +148,26 @@ function GroupRow({ g }: { g: EventGroup }) {
   );
 }
 
-export default async function EventsPage() {
+export default function EventsPage() {
+  // Static shell — heading renders instantly, the log streams in.
+  return (
+    <div>
+      <h1 className="mb-1 text-lg font-semibold tracking-tight text-zinc-100">
+        Events
+      </h1>
+      <p className="mb-8 text-sm text-zinc-500">
+        Outages and recoveries detected by the checks — grouped per incident,
+        most recent first.
+      </p>
+      <Suspense fallback={<ListSkeleton rows={6} />}>
+        <EventsLog />
+      </Suspense>
+    </div>
+  );
+}
+
+async function EventsLog() {
+  await connection();
   let events: StatusEvent[] = [];
   let loadError = false;
   try {
@@ -160,14 +181,6 @@ export default async function EventsPage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-lg font-semibold tracking-tight text-zinc-100">
-        Events
-      </h1>
-      <p className="mb-8 text-sm text-zinc-500">
-        Outages and recoveries detected by the checks — grouped per incident,
-        most recent first.
-      </p>
-
       {loadError ? (
         <div className="rounded-sm border border-zinc-800 bg-zinc-900/40 px-5 py-10 text-center text-sm text-zinc-500">
           Event data unavailable.

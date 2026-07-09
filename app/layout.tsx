@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import { Suspense } from "react";
 import { Activity } from "lucide-react";
 import { REGIONS, REGION_LABELS } from "@/lib/monitors";
 import { Nav } from "./nav";
@@ -73,7 +74,24 @@ export default function RootLayout({
               EVE Tools Status
             </span>
           </a>
-          <Nav />
+          <Suspense
+            fallback={
+              <nav className="flex items-center gap-1 rounded-sm border border-zinc-800 bg-zinc-900/60 p-1">
+                {["Status", "Events", "Monitors", "Partners", "Docs"].map(
+                  (l) => (
+                    <span
+                      key={l}
+                      className="rounded-sm px-3 py-1.5 text-sm uppercase tracking-wider text-zinc-400"
+                    >
+                      {l}
+                    </span>
+                  ),
+                )}
+              </nav>
+            }
+          >
+            <Nav />
+          </Suspense>
         </header>
         <main className="mx-auto max-w-3xl px-4 pb-16 pt-6">
           <Clock />

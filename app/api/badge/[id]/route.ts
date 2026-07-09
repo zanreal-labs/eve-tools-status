@@ -7,7 +7,6 @@ import {
 } from "@/lib/health";
 import type { LatestEntry } from "@/lib/checks";
 
-export const dynamic = "force-dynamic";
 
 // ~monospace glyph width at font-size 11 for width estimation
 const CHAR_W = 6.7;

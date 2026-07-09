@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { authorized, USER_AGENT } from "@/lib/checks";
 import { MONITORS } from "@/lib/monitors";
 
-export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 // Only hosts belonging to monitored tools (or their subdomains) may be probed.

@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { DetailSkeleton } from "../../skeletons";
 import { MONITORS, REGION_LABELS, type Region } from "@/lib/monitors";
 import { kv, K } from "@/lib/kv";
 import type { StatusEvent } from "@/lib/checks";
 import { utc } from "../../ui";
 
-export const dynamic = "force-dynamic";
 
 type IncidentMeta = {
   id: string;
@@ -53,28 +54,47 @@ export async function generateMetadata({
 }: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
+  // Metadata derives from the id alone (tool, kind, start timestamp) so the
+  // static shell can prerender without touching KV.
   const { id } = await params;
-  const data = await loadIncident(id);
-  if (!data) return { title: "Incident not found — EVE Tools Status" };
-  const tool =
-    MONITORS.find((m) => m.id === data.meta.monitorId)?.name ??
-    data.meta.monitorId;
-  const date = new Date(Number(data.meta.startedAt)).toISOString().slice(0, 10);
-  const isMaint = data.meta.kind === "maint";
-  const state = data.meta.endedAt
-    ? isMaint
-      ? "completed planned maintenance"
-      : "resolved outage"
-    : isMaint
-      ? "ongoing planned maintenance"
-      : "ongoing outage";
+  const m = id.match(/^([a-z0-9]+)-(m?)(\d+)$/);
+  if (!m) return { title: "Incident not found — EVE Tools Status" };
+  const tool = MONITORS.find((mm) => mm.id === m[1])?.name ?? m[1];
+  const isMaint = m[2] === "m";
+  const date = new Date(Number(m[3])).toISOString().slice(0, 10);
+  const what = isMaint ? "planned maintenance" : "outage";
   return {
-    title: `${tool} ${state} — ${date} | EVE Tools Status`,
-    description: `${tool} ${isMaint ? "planned maintenance" : "availability incident"} on ${date}: detected by EVE Tools Status checks from 4 regions. Duration: ${durationText(Number(data.meta.startedAt), data.meta.endedAt ? Number(data.meta.endedAt) : undefined)}.`,
+    title: `${tool} ${what} — ${date} | EVE Tools Status`,
+    description: `${tool} ${isMaint ? "planned maintenance window" : "availability incident"} on ${date}, detected by EVE Tools Status checks from 4 regions. Full per-region timeline inside.`,
   };
 }
 
-export default async function IncidentPage({
+export default function IncidentPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  // Static shell: back link. The incident body streams in — params are
+  // awaited inside the Suspense boundary so the shell stays prerenderable.
+  return (
+    <div>
+      <Link
+        href="/events"
+        className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+        All events
+      </Link>
+      <div className="mt-4">
+        <Suspense fallback={<DetailSkeleton />}>
+          <IncidentBody params={params} />
+        </Suspense>
+      </div>
+    </div>
+  );
+}
+
+async function IncidentBody({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -93,15 +113,7 @@ export default async function IncidentPage({
 
   return (
     <div>
-      <Link
-        href="/events"
-        className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-        All events
-      </Link>
-
-      <div className="mb-1 mt-4 flex items-center gap-3">
+      <div className="mb-1 flex items-center gap-3">
         <span
           className={`inline-block h-2.5 w-2.5 rounded-full ${
             isMaint ? "bg-cyan-400" : resolved ? "bg-emerald-500" : "bg-red-500"

@@ -1,17 +1,14 @@
 import { CATEGORIES } from "@/lib/monitors";
 import { loadStatus, type MonitorStatus } from "@/lib/status";
 import Link from "next/link";
+import { connection } from "next/server";
+import { Suspense } from "react";
 import { ExternalLink } from "lucide-react";
 import { HEALTH_META, RegionChips, StatusDot, monitorHealth } from "../ui";
+import { ListSkeleton } from "../skeletons";
 
-export const dynamic = "force-dynamic";
-
-export default async function MonitorsPage() {
-  let monitors: Record<string, MonitorStatus> = {};
-  try {
-    ({ monitors } = await loadStatus());
-  } catch {}
-
+export default function MonitorsPage() {
+  // Static shell — heading renders instantly, live state streams in.
   return (
     <div>
       <h1 className="mb-1 text-lg font-semibold tracking-tight text-zinc-100">
@@ -20,7 +17,22 @@ export default async function MonitorsPage() {
       <p className="mb-8 text-sm text-zinc-500">
         Every monitored endpoint with its live per-region state.
       </p>
+      <Suspense fallback={<ListSkeleton rows={10} />}>
+        <MonitorsList />
+      </Suspense>
+    </div>
+  );
+}
 
+async function MonitorsList() {
+  await connection();
+  let monitors: Record<string, MonitorStatus> = {};
+  try {
+    ({ monitors } = await loadStatus());
+  } catch {}
+
+  return (
+    <div>
       <div className="space-y-8">
         {CATEGORIES.map((cat) => (
           <section key={cat.id}>
