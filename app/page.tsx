@@ -16,11 +16,9 @@ import {
   type Health,
 } from "./ui";
 import Link from "next/link";
-import { connection } from "next/server";
-import { Suspense } from "react";
 import { NextCheck } from "./next-check";
-import { BoardSkeleton } from "./skeletons";
 
+export const dynamic = "force-dynamic";
 
 function MonitorRow({
   monitor,
@@ -71,17 +69,7 @@ function MonitorRow({
   );
 }
 
-export default function Page() {
-  // Static shell — prerendered; the live board streams in below.
-  return (
-    <Suspense fallback={<BoardSkeleton />}>
-      <StatusBoard />
-    </Suspense>
-  );
-}
-
-async function StatusBoard() {
-  await connection(); // live data — always render at request time
+export default async function Page() {
   let monitors: Record<string, MonitorStatus> = {};
   let lastRun: number | null = null;
   let openIncidents: Record<string, string> = {};

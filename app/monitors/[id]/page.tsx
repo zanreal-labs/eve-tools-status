@@ -1,17 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { connection } from "next/server";
-import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { CATEGORIES, MONITORS, REGION_LABELS } from "@/lib/monitors";
 import { loadMonitorDetail, HISTORY_DAYS } from "@/lib/status";
 import { UptimeBars, utc } from "../../ui";
-import { DetailSkeleton } from "../../skeletons";
 
-export function generateStaticParams() {
-  return MONITORS.map((m) => ({ id: m.id }));
-}
+export const dynamic = "force-dynamic";
 
 function categoryOf(monitorId: string): string | undefined {
   return CATEGORIES.find((c) => c.monitors.some((m) => m.id === monitorId))
@@ -46,11 +41,27 @@ export default async function MonitorPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const monitor = MONITORS.find((m) => m.id === id);
-  if (!monitor) notFound();
+  const detail = await loadMonitorDetail(id).catch(() => null);
+  if (!detail) notFound();
+  const { monitor, regions, days, uptimePct, incidents, openIncidentId } =
+    detail;
 
-  // Everything below the config line is live data streamed in via Suspense;
-  // the header, description and check config are part of the static shell.
+  const present = regions.filter((r) => r.latest);
+  const failingRegions = regions.filter((r) => r.latest && !r.latest.ok);
+  const health =
+    present.length === 0 ? "unknown"
+    : failingRegions.length === present.length && failingRegions.length > 0 ? "down"
+    : failingRegions.length > 0 ? "degraded"
+    : present.some((r) => r.latest!.maint) ? "maintenance"
+    : "operational";
+  const healthText = {
+    operational: ["Operational", "text-emerald-400"],
+    maintenance: ["Planned maintenance", "text-cyan-400"],
+    degraded: ["Degraded", "text-amber-400"],
+    down: ["Down", "text-red-400"],
+    unknown: ["No data", "text-zinc-500"],
+  }[health] as [string, string];
+
   return (
     <div>
       <Link
@@ -74,6 +85,12 @@ export default async function MonitorPage({
         >
           <ExternalLink className="h-4 w-4" aria-hidden />
         </a>
+        <span className={`text-sm ${healthText[1]}`}>{healthText[0]}</span>
+        {uptimePct != null && (
+          <span className="text-sm tabular-nums text-zinc-400">
+            {uptimePct.toFixed(2)}% over {HISTORY_DAYS} days
+          </span>
+        )}
       </div>
       <p className="text-sm text-zinc-500">
         {monitor.description}
@@ -85,53 +102,6 @@ export default async function MonitorPage({
         {monitor.maintenance &&
           ` · daily maintenance ${String(Math.floor(monitor.maintenance.fromMinute / 60)).padStart(2, "0")}:${String(monitor.maintenance.fromMinute % 60).padStart(2, "0")}–${String(Math.floor(monitor.maintenance.toMinute / 60)).padStart(2, "0")}:${String(monitor.maintenance.toMinute % 60).padStart(2, "0")} UTC`}
       </p>
-
-      <Suspense fallback={<DetailSkeleton />}>
-        <MonitorLive id={monitor.id} />
-      </Suspense>
-    </div>
-  );
-}
-
-async function MonitorLive({ id }: { id: string }) {
-  await connection();
-  const detail = await loadMonitorDetail(id).catch(() => null);
-  if (!detail) {
-    return (
-      <div className="rounded-sm border border-zinc-800 bg-zinc-900/40 px-5 py-10 text-center text-sm text-zinc-500">
-        Status data unavailable.
-      </div>
-    );
-  }
-  const { regions, days, uptimePct, incidents } = detail;
-  const monitor = detail.monitor;
-
-  const present = regions.filter((r) => r.latest);
-  const failingRegions = regions.filter((r) => r.latest && !r.latest.ok);
-  const health =
-    present.length === 0 ? "unknown"
-    : failingRegions.length === present.length && failingRegions.length > 0 ? "down"
-    : failingRegions.length > 0 ? "degraded"
-    : present.some((r) => r.latest!.maint) ? "maintenance"
-    : "operational";
-  const healthText = {
-    operational: ["Operational", "text-emerald-400"],
-    maintenance: ["Planned maintenance", "text-cyan-400"],
-    degraded: ["Degraded", "text-amber-400"],
-    down: ["Down", "text-red-400"],
-    unknown: ["No data", "text-zinc-500"],
-  }[health] as [string, string];
-
-  return (
-    <div>
-      <div className="mb-6 flex flex-wrap items-center gap-3 text-sm">
-        <span className={healthText[1]}>{healthText[0]}</span>
-        {uptimePct != null && (
-          <span className="tabular-nums text-zinc-400">
-            {uptimePct.toFixed(2)}% over {HISTORY_DAYS} days
-          </span>
-        )}
-      </div>
 
       <h2 className="mb-2 text-xs font-medium uppercase tracking-widest text-zinc-500">
         Combined uptime · last {HISTORY_DAYS} days

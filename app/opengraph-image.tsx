@@ -1,9 +1,9 @@
 import { ImageResponse } from "next/og";
-import { cacheLife } from "next/cache";
 import { MONITORS, REGIONS } from "@/lib/monitors";
 import { kv, K } from "@/lib/kv";
 import type { LatestEntry } from "@/lib/checks";
 
+export const revalidate = 300;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = "EVE Tools Status — live availability of EVE Online community tools";
@@ -28,8 +28,6 @@ function toEntry(v: unknown): LatestEntry | null {
 }
 
 async function overallStatus(): Promise<Overall> {
-  "use cache";
-  cacheLife({ stale: 300, revalidate: 300, expire: 3600 });
   const total = MONITORS.length;
   try {
     const latest = await kv().hgetall<Record<string, unknown>>(K.latest);

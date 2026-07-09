@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { connection } from "next/server";
 import { CATEGORIES, REGIONS } from "@/lib/monitors";
 import { loadStatus } from "@/lib/status";
 import { healthFromEntries } from "@/lib/health";
 
+export const dynamic = "force-dynamic";
 
 const CORS = {
   "access-control-allow-origin": "*",
@@ -15,7 +15,6 @@ export function OPTIONS() {
 }
 
 export async function GET() {
-  await connection(); // always serve fresh data, never a build-time snapshot
   try {
     const { monitors, lastRun } = await loadStatus();
 

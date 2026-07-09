@@ -3,6 +3,7 @@ import { REGION_LABELS } from "@/lib/monitors";
 import { loadMonitorDetail } from "@/lib/status";
 import { healthFromEntries } from "@/lib/health";
 
+export const dynamic = "force-dynamic";
 
 const CORS = {
   "access-control-allow-origin": "*",

@@ -4,6 +4,7 @@ import { SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { kv, K } from "@/lib/kv";
 import { getSesClient, sesConfigured, SES_FROM } from "@/lib/ses";
 
+export const dynamic = "force-dynamic";
 
 const MAX_PER_HOUR = 3;
 const CONTACT_EMAIL =

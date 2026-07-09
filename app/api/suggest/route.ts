@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { kv, K } from "@/lib/kv";
 
+export const dynamic = "force-dynamic";
 
 const MAX_PER_HOUR = 5;
 
