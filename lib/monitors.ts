@@ -129,6 +129,13 @@ export const CATEGORIES: Category[] = [
         siteUrl: "https://abysstracker.com/",
         description: "Abyssal run & loot tracker",
       },
+      {
+        id: "evemarketbrowser",
+        name: "EVE Market Browser",
+        url: "https://evemarketbrowser.com/",
+        siteUrl: "https://evemarketbrowser.com/",
+        description: "In-game style market browser",
+      },
     ],
   },
   {
