@@ -5,7 +5,7 @@ import {
   type Monitor,
 } from "@/lib/monitors";
 import { loadStatus, HISTORY_DAYS, type MonitorStatus } from "@/lib/status";
-import { ExternalLink } from "lucide-react";
+import { ChevronRight, ExternalLink } from "lucide-react";
 import {
   HEALTH_META,
   StatusDot,
@@ -161,9 +161,14 @@ export default async function Page() {
                         {HEALTH_META[health].label.toLowerCase()}
                       </span>
                     </div>
-                    <span className="text-xs text-zinc-500">
+                    <span className="flex items-center gap-1.5 text-xs text-zinc-500">
                       {regions.map((r) => REGION_LABELS[r]).join(", ")}
-                      {incidentId && <span className="ml-2 text-zinc-600">→</span>}
+                      {incidentId && (
+                        <ChevronRight
+                          className="h-3.5 w-3.5 text-zinc-600"
+                          aria-hidden
+                        />
+                      )}
                     </span>
                   </>
                 );

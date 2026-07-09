@@ -6,6 +6,7 @@ export type CheckResult = {
   ok: boolean;
   status: number;
   latencyMs: number;
+  maint?: boolean;
 };
 
 export type LatestEntry = {
@@ -13,6 +14,7 @@ export type LatestEntry = {
   status: number;
   ms: number;
   ts: number;
+  maint?: boolean;
 };
 
 export type StatusEvent = {
@@ -67,13 +69,30 @@ async function checkOne(
   return attempt(monitorId, url, timeoutMs);
 }
 
+function inMaintenanceWindow(m: (typeof MONITORS)[number], ts: number): boolean {
+  if (!m.maintenance) return false;
+  const d = new Date(ts);
+  const minute = d.getUTCHours() * 60 + d.getUTCMinutes();
+  return minute >= m.maintenance.fromMinute && minute < m.maintenance.toMinute;
+}
+
 export async function runChecks(region: Region): Promise<CheckResult[]> {
   const r = kv();
   const fields = MONITORS.map((m) => `${m.id}:${region}`);
-  const [results, prevRaw] = await Promise.all([
+  const [rawResults, prevRaw] = await Promise.all([
     Promise.all(MONITORS.map((m) => checkOne(m.id, m.url, m.timeoutMs))),
     r.hmget<Record<string, LatestEntry | null>>(K.latest, ...fields),
   ]);
+
+  // Failures inside a planned-maintenance window count as maintenance, not
+  // outage: no incident, no uptime penalty, distinct UI state.
+  const results = rawResults.map((res) => {
+    const m = MONITORS.find((mm) => mm.id === res.monitorId);
+    if (!res.ok && m && inMaintenanceWindow(m, Date.now())) {
+      return { ...res, ok: true, maint: true };
+    }
+    return res;
+  });
 
   const now = Date.now();
   const date = new Date(now).toISOString().slice(0, 10);
@@ -101,6 +120,7 @@ export async function runChecks(region: Region): Promise<CheckResult[]> {
       status: res.status,
       ms: res.latencyMs,
       ts: now,
+      ...(res.maint ? { maint: true } : {}),
     };
   }
 

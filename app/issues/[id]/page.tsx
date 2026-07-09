@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { MONITORS, REGION_LABELS, type Region } from "@/lib/monitors";
 import { kv, K } from "@/lib/kv";
 import type { StatusEvent } from "@/lib/checks";
@@ -85,9 +86,10 @@ export default async function IncidentPage({
     <div>
       <Link
         href="/events"
-        className="text-xs uppercase tracking-wider text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline"
+        className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline"
       >
-        ← All events
+        <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+        All events
       </Link>
 
       <div className="mb-1 mt-4 flex items-center gap-3">

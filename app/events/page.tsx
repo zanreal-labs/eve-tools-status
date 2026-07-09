@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { MONITORS, REGION_LABELS, type Region } from "@/lib/monitors";
 import { loadStatus, type StatusEvent } from "@/lib/status";
 import { utc } from "../ui";
@@ -97,10 +98,12 @@ function GroupRow({ g }: { g: EventGroup }) {
           </span>
         )}
       </div>
-      <span className="whitespace-nowrap text-xs tabular-nums text-zinc-500">
+      <span className="flex items-center gap-1.5 whitespace-nowrap text-xs tabular-nums text-zinc-500">
         {utc(g.firstTs, false)}
         {g.lastTs !== g.firstTs && ` – ${utc(g.lastTs, false)}`}
-        {g.incidentId && <span className="ml-2 text-zinc-600">→</span>}
+        {g.incidentId && (
+          <ChevronRight className="h-3.5 w-3.5 text-zinc-600" aria-hidden />
+        )}
       </span>
     </>
   );

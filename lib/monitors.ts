@@ -7,6 +7,9 @@ export type Monitor = {
   /** Override the default check timeout — for hosts that tarpit the first
    *  connection from datacenter IPs (SYN-retry ladder needs ~15-20s). */
   timeoutMs?: number;
+  /** Daily planned-maintenance window (UTC minutes since midnight).
+   *  Failures inside it are reported as maintenance, not outage. */
+  maintenance?: { fromMinute: number; toMinute: number; label: string };
 };
 
 export type Category = {
@@ -36,6 +39,12 @@ export const CATEGORIES: Category[] = [
         url: "https://esi.evetech.net/latest/status/?datasource=tranquility",
         siteUrl: "https://developers.eveonline.com/api-explorer",
         description: "Official EVE Swagger Interface",
+        // Tranquility cluster restarts daily 11:00–11:15 UTC.
+        maintenance: {
+          fromMinute: 11 * 60,
+          toMinute: 11 * 60 + 20,
+          label: "Planned cluster maintenance",
+        },
       },
       {
         id: "sso",

@@ -1,1 +1,6 @@
 @import "tailwindcss";
+
+/* Hide the "Secured by c15t" branding tag */
+.ets-c15t-hide {
+  display: none !important;
+}

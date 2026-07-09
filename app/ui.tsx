@@ -106,12 +106,21 @@ export function RegionChips({ s }: { s: MonitorStatus | undefined }) {
           >
             <span
               className={`inline-block h-1.5 w-1.5 rounded-full ${
-                e ? (e.ok ? "bg-emerald-500" : "bg-red-500") : "bg-zinc-600"
+                e
+                  ? e.maint
+                    ? "bg-cyan-400"
+                    : e.ok
+                      ? "bg-emerald-500"
+                      : "bg-red-500"
+                  : "bg-zinc-600"
               }`}
             />
             {REGION_LABELS[r]}
-            {e && e.ok && <span className="text-zinc-500">{e.ms}ms</span>}
-            {e && !e.ok && (
+            {e && e.maint && <span className="text-cyan-400">maintenance</span>}
+            {e && !e.maint && e.ok && (
+              <span className="text-zinc-500">{e.ms}ms</span>
+            )}
+            {e && !e.maint && !e.ok && (
               <span className="text-red-400">
                 {e.status > 0 ? `HTTP ${e.status}` : "timeout"}
               </span>
@@ -133,6 +142,7 @@ export function utc(ts: number, withDate = true): string {
         : {}),
       hour: "2-digit",
       minute: "2-digit",
+      second: "2-digit",
     }) + " UTC"
   );
 }
