@@ -49,6 +49,14 @@ export default function DocsPage() {
           ZanReal
         </a>{" "}
         and is not affiliated with CCP Games or any of the monitored projects.
+        The source code is public:{" "}
+        <a
+          href="https://github.com/zanreal-labs/eve-tools-status"
+          className="text-zinc-100 underline underline-offset-4"
+        >
+          github.com/zanreal-labs/eve-tools-status
+        </a>
+        .
       </p>
 
       <H2>How we check</H2>
