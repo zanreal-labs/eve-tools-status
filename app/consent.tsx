@@ -8,79 +8,16 @@ import {
   useConsentDialogTrigger,
 } from "@c15t/react";
 import { baseTranslations } from "@c15t/translations/all";
+import { gtag } from "@c15t/scripts/google-tag";
+import { vercelAnalytics } from "@c15t/scripts/vercel-analytics";
 import "@c15t/react/styles.css";
 
-const GA_ID = "G-FCHN28KZ3T";
-
-declare global {
-  interface Window {
-    gtag?: (...args: unknown[]) => void;
-  }
-}
-
-/* Analytics load through c15t's consent-gated script loader.
- *
- * - gtag bootstrap + gtag.js use Google Consent Mode v2 in advanced mode:
- *   they always load, every signal defaults to denied, and c15t's
- *   onConsentChange pushes category changes into consent updates.
- * - Vercel Analytics only loads at all once "measurement" is granted,
- *   and c15t unloads it again if consent is revoked.
- */
+/* Analytics via c15t's official vendor integrations: gtag handles the
+ * Consent Mode v2 bootstrap/defaults/updates itself; Vercel Analytics
+ * is consent-gated on the "measurement" category. */
 const analyticsScripts = [
-  {
-    id: "gtag-bootstrap",
-    category: "necessary" as const,
-    alwaysLoad: true,
-    textContent: `
-window.dataLayer = window.dataLayer || [];
-function gtag(){ dataLayer.push(arguments); }
-window.gtag = gtag;
-gtag('consent', 'default', {
-  ad_storage: 'denied',
-  ad_user_data: 'denied',
-  ad_personalization: 'denied',
-  analytics_storage: 'denied',
-  functionality_storage: 'denied',
-  personalization_storage: 'denied',
-  security_storage: 'granted',
-  wait_for_update: 500,
-});
-gtag('set', 'url_passthrough', true);
-gtag('set', 'ads_data_redaction', true);
-gtag('js', new Date());
-gtag('config', '${GA_ID}');`,
-  },
-  {
-    id: "google-analytics",
-    src: `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`,
-    category: "measurement" as const,
-    alwaysLoad: true, // Consent Mode v2 advanced — gtag honours the signals above
-    async: true,
-    onConsentChange: ({
-      consents,
-    }: {
-      consents: Record<string, boolean>;
-    }) => {
-      if (typeof window.gtag !== "function") return;
-      const g = (granted: boolean | undefined) =>
-        granted ? "granted" : "denied";
-      window.gtag("consent", "update", {
-        analytics_storage: g(consents.measurement),
-        ad_storage: g(consents.marketing),
-        ad_user_data: g(consents.marketing),
-        ad_personalization: g(consents.marketing),
-        functionality_storage: g(consents.functionality),
-        personalization_storage: g(consents.experience),
-        security_storage: "granted",
-      });
-    },
-  },
-  {
-    id: "vercel-analytics",
-    src: "/_vercel/insights/script.js",
-    category: "measurement" as const,
-    defer: true,
-  },
+  gtag({ id: "G-FCHN28KZ3T", category: "measurement" }),
+  vercelAnalytics(),
 ];
 
 const FONT_MONO =

@@ -245,3 +245,75 @@ const loadMonitorDetailImpl = async (
 };
 
 export const loadMonitorDetail = cache(loadMonitorDetailImpl);
+
+export type IncidentFeedItem = {
+  id: string;
+  monitorId: string;
+  kind: "outage" | "maint";
+  startedAt: number;
+  endedAt: number | null;
+  /** Regions that reported the failure/maintenance. */
+  regions: Region[];
+  /** Sample failure signature, e.g. "HTTP 503" or "timeout"; null for maint. */
+  reason: string | null;
+};
+
+/** Full incident history for the events page — everything within the
+ *  uptime window, sourced from the persistent incident records rather
+ *  than the small rolling event buffer. */
+const loadIncidentFeedImpl = async (
+  windowDays = HISTORY_DAYS,
+): Promise<IncidentFeedItem[]> => {
+  const r = kv();
+  const ids = (await r.lrange<string>(K.incidents, 0, 199)) ?? [];
+  if (ids.length === 0) return [];
+
+  const pipe = r.pipeline();
+  for (const id of ids) {
+    pipe.hgetall(K.incident(id));
+    pipe.lrange(K.incidentEvents(id), 0, 99);
+  }
+  const replies = await pipe.exec<unknown[]>();
+
+  const cutoff = Date.now() - windowDays * 86_400_000;
+  const items: IncidentFeedItem[] = [];
+  ids.forEach((id, i) => {
+    const meta = (replies[i * 2] ?? {}) as Record<string, unknown>;
+    const rawEvents = (replies[i * 2 + 1] ?? []) as unknown[];
+    const startedAt = Number(meta.startedAt ?? 0);
+    if (!meta.monitorId || startedAt < cutoff) return;
+
+    const events: StatusEvent[] = [];
+    for (const raw of rawEvents) {
+      if (typeof raw === "string") {
+        try {
+          events.push(JSON.parse(raw));
+        } catch {}
+      } else if (raw && typeof raw === "object") {
+        events.push(raw as StatusEvent);
+      }
+    }
+    const down = events.filter((e) => !e.ok);
+    const sample = down[0];
+    items.push({
+      id,
+      monitorId: String(meta.monitorId),
+      kind: meta.kind === "maint" ? "maint" : "outage",
+      startedAt,
+      endedAt: meta.endedAt ? Number(meta.endedAt) : null,
+      regions: [...new Set(down.map((e) => e.region))],
+      reason:
+        meta.kind === "maint" || !sample
+          ? null
+          : sample.status > 0
+            ? `HTTP ${sample.status}`
+            : "timeout",
+    });
+  });
+
+  return items.sort(
+    (a, b) => (b.endedAt ?? b.startedAt) - (a.endedAt ?? a.startedAt),
+  );
+};
+
+export const loadIncidentFeed = cache(loadIncidentFeedImpl);

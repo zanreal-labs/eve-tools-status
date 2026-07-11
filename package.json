@@ -10,6 +10,7 @@
   "dependencies": {
     "@aws-sdk/client-sesv2": "^3.1083.0",
     "@c15t/react": "^2.1.0",
+    "@c15t/scripts": "^2.1.0",
     "@c15t/translations": "^2.1.0",
     "@upstash/redis": "^1.38.0",
     "@vercel/functions": "^3.7.5",
