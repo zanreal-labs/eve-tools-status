@@ -136,6 +136,13 @@ export const CATEGORIES: Category[] = [
         siteUrl: "https://evemarketbrowser.com/",
         description: "In-game style market browser",
       },
+      {
+        id: "iskgg",
+        name: "ISK.GG",
+        url: "https://isk.gg/readyz",
+        siteUrl: "https://isk.gg/",
+        description: "Market explorer & regional price history",
+      },
     ],
   },
   {
