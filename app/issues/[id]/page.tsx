@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import { cacheLife } from "next/cache";
 import { ArrowLeft } from "lucide-react";
 import { IncidentSkeleton } from "../../skeletons";
 import { MONITORS, REGION_LABELS, type Region } from "@/lib/monitors";
@@ -21,6 +22,10 @@ type IncidentMeta = {
 const ID_RE = /^[a-z0-9]+-m?\d+$/;
 
 async function loadIncident(id: string) {
+  "use cache";
+  // Same lifetime as the rest of the status surfaces; an ended incident never
+  // changes again and an open one only moves when the next check lands.
+  cacheLife({ stale: 60, revalidate: 60, expire: 600 });
   if (!ID_RE.test(id)) return null;
   const r = kv();
   const [meta, rawEvents] = await Promise.all([

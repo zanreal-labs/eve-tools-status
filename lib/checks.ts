@@ -29,6 +29,10 @@ export type StatusEvent = {
 };
 
 export const CHECK_TIMEOUT_MS = 10_000;
+/** Pause between the two attempts. Long enough to separate them into two
+ *  independent rounds, short enough that a down monitor does not hold the
+ *  whole region batch - and every other probe with it - open for seconds. */
+export const RETRY_DELAY_MS = 500;
 export const USER_AGENT =
   "Mozilla/5.0 (compatible; EveToolsStatusBot/1.0; +https://eve-tools-status.com/docs)";
 
@@ -67,7 +71,7 @@ async function checkOne(
   const first = await attempt(monitorId, url, timeoutMs);
   if (first.ok) return first;
   // One retry after a short pause — a single slow round shouldn't page as down.
-  await new Promise((r) => setTimeout(r, 2000));
+  await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
   return attempt(monitorId, url, timeoutMs);
 }
 

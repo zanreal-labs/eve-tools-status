@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { connection } from "next/server";
 import { Suspense } from "react";
 import { ChevronRight } from "lucide-react";
 import { MONITORS, REGION_LABELS } from "@/lib/monitors";
@@ -94,7 +93,6 @@ export default function EventsPage() {
 }
 
 async function EventsLog() {
-  await connection();
   let items: IncidentFeedItem[] = [];
   let loadError = false;
   try {

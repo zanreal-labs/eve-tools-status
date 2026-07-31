@@ -2,20 +2,28 @@
 
 Status page for EVE Online community tools — https://eve-tools-status.com
 
-25 monitors across 6 categories (core services, killboards, market & industry,
+27 monitors across 6 categories (core services, killboards, market & industry,
 maps & intel, wormholes, reference), checked every 15 minutes from 4 Vercel
 regions (`iad1`, `sfo1`, `fra1`, `syd1`).
 
 ## How it works
 
-- `vercel.json` cron (`*/15 * * * *`) hits `/api/cron`
-- The orchestrator fans out to `/api/check/{region}` — each route is pinned to
-  its region via `preferredRegion`, fetches every monitor URL and records
-  status + latency
+- Four `vercel.json` crons (`*/15 * * * *`), one per region, hit
+  `/api/check/{region}` directly. Each route is pinned to its region via
+  `preferredRegion`, fetches every monitor URL in parallel and records status +
+  latency. There is no orchestrator in the scheduled path on purpose: a fan-out
+  function spends its whole life awaiting the region it called, which billed a
+  fifth function for the duration of the slowest region on every run
+- `/api/cron` still fans out to all four regions, for triggering a full round
+  by hand
 - Results land in Upstash Redis (`ets:*` keys): latest snapshot, one daily
   aggregate hash per day (100-day TTL), status-transition events
 - UI: Status (45-day uptime bars), Events (incident log), Monitors (live
   per-region state) + a suggest-a-tool form
+- Every page reads KV through a cached loader (`use cache`, 60s revalidate),
+  so the pages are prerendered and served from the CDN. Data that only changes
+  once per check cycle does not need a function invocation and a 49-command
+  pipeline per visitor
 
 ## Environment variables
 
