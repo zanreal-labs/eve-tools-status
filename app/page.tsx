@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { connection } from "next/server";
 import { ChevronRight, ExternalLink } from "lucide-react";
 import {
   CATEGORIES,
@@ -98,7 +97,6 @@ function MonitorRowShell({ monitor }: { monitor: Monitor }) {
 }
 
 async function RowStats({ id }: { id: string }) {
-  await connection();
   const { monitors } = await loadStatus().catch(() => ({
     monitors: {} as Awaited<ReturnType<typeof loadStatus>>["monitors"],
   }));
@@ -115,7 +113,6 @@ async function RowStats({ id }: { id: string }) {
 }
 
 async function RowBars({ id }: { id: string }) {
-  await connection();
   const { monitors } = await loadStatus().catch(() => ({
     monitors: {} as Awaited<ReturnType<typeof loadStatus>>["monitors"],
   }));
@@ -177,7 +174,6 @@ function BannerFallback() {
 }
 
 async function Banner() {
-  await connection();
   let overall: Health = "unknown";
   let lastRun: number | null = null;
   let loadError = false;
@@ -248,7 +244,6 @@ async function Banner() {
 /* fallback is null and there is no reserved space to shift.           */
 
 async function ActiveIssues() {
-  await connection();
   let data: Awaited<ReturnType<typeof loadStatus>> | null = null;
   try {
     data = await loadStatus();

@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { connection } from "next/server";
 import { ExternalLink } from "lucide-react";
 import {
   CATEGORIES,
@@ -98,7 +97,6 @@ function MonitorCard({ monitor }: { monitor: Monitor }) {
 }
 
 async function CardHealth({ id }: { id: string }) {
-  await connection();
   const { monitors } = await loadStatus().catch(() => ({
     monitors: {} as Awaited<ReturnType<typeof loadStatus>>["monitors"],
   }));
@@ -113,7 +111,6 @@ async function CardHealth({ id }: { id: string }) {
 }
 
 async function CardChips({ id }: { id: string }) {
-  await connection();
   const { monitors } = await loadStatus().catch(() => ({
     monitors: {} as Awaited<ReturnType<typeof loadStatus>>["monitors"],
   }));

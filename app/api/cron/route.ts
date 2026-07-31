@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { authorized } from "@/lib/checks";
 import { REGIONS } from "@/lib/monitors";
 
-export const maxDuration = 150;
+/* Manual fan-out only. The scheduled runs go straight to /api/check/{region}
+ * - one Vercel cron each - because this orchestrator does nothing but wait
+ * for them: every scheduled run through here billed a fifth function for the
+ * full duration of the slowest region. Kept for one-command manual runs. */
+export const maxDuration = 60;
 
 function baseUrl(): string {
   if (process.env.STATUS_BASE_URL) return process.env.STATUS_BASE_URL;
@@ -22,7 +26,7 @@ export async function GET(req: Request) {
       const res = await fetch(`${base}/api/check/${region}`, {
         headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
         cache: "no-store",
-        signal: AbortSignal.timeout(130_000),
+        signal: AbortSignal.timeout(55_000),
       });
       if (!res.ok) throw new Error(`${region}: HTTP ${res.status}`);
       return res.json();

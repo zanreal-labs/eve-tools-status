@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronRight, ExternalLink } from "lucide-react";
 import {
@@ -151,7 +150,6 @@ export default async function MonitorPage({
 }
 
 async function HealthLine({ id }: { id: string }) {
-  await connection();
   const detail = await loadMonitorDetail(id).catch(() => null);
   if (!detail) return <span className="text-sm text-zinc-500">No data</span>;
   const { regions, uptimePct } = detail;
@@ -183,7 +181,6 @@ async function HealthLine({ id }: { id: string }) {
 }
 
 async function CombinedBars({ id }: { id: string }) {
-  await connection();
   const detail = await loadMonitorDetail(id).catch(() => null);
   if (!detail) return <Pulse className="h-12 w-full" />;
   return <UptimeBars days={detail.days} />;
@@ -230,7 +227,6 @@ function RegionCardFallback({ region }: { region: Region }) {
 }
 
 async function RegionCard({ id, region }: { id: string; region: Region }) {
-  await connection();
   const detail = await loadMonitorDetail(id).catch(() => null);
   const rd = detail?.regions.find((r) => r.region === region);
   if (!rd) return <RegionCardFallback region={region} />;
@@ -300,7 +296,6 @@ async function RegionCard({ id, region }: { id: string; region: Region }) {
 }
 
 async function IncidentList({ id, name }: { id: string; name: string }) {
-  await connection();
   const detail = await loadMonitorDetail(id).catch(() => null);
   const incidents = detail?.incidents ?? [];
   if (incidents.length === 0) {

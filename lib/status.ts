@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { cacheLife } from "next/cache";
 import { MONITORS, REGIONS, type Monitor, type Region } from "./monitors";
 import { kv, K } from "./kv";
 import type { LatestEntry, StatusEvent } from "./checks";
@@ -21,6 +22,28 @@ export type MonitorStatus = {
 
 export const HISTORY_DAYS = 45;
 
+/* The cron rewrites every KV key once per 15 minutes, so rendering a status
+ * surface per request buys no freshness - it just multiplies KV round-trips
+ * and function invocations by traffic. One profile covers all of them:
+ *   revalidate 60  - a check that lands shows up within a minute
+ *   expire     600 - a cold page refreshes well inside one check cycle, so
+ *                    cached output is never older than the data a fresh
+ *                    render would have found
+ * `expire` stays above 5 minutes deliberately: shorter lifetimes are excluded
+ * from prerendering and fall back to per-request rendering, which is the cost
+ * this profile exists to remove. */
+const STATUS_CACHE_LIFE = { stale: 60, revalidate: 60, expire: 600 };
+
+/** A KV failure must not escape a `use cache` scope: an error thrown inside
+ *  one fails the whole prerender instead of reaching the caller's catch. The
+ *  cached loaders report failure as a value; the exported wrappers turn it
+ *  back into a rejection, which is what every call site already handles. */
+type Loaded<T> = { ok: true; value: T } | { ok: false };
+
+function unavailable(): Error {
+  return new Error("status data unavailable");
+}
+
 function dateStr(offsetDays: number): string {
   const d = new Date(Date.now() - offsetDays * 86_400_000);
   return d.toISOString().slice(0, 10);
@@ -38,12 +61,14 @@ function toEntry(v: unknown): LatestEntry | null {
   return v as LatestEntry;
 }
 
-const loadStatusImpl = async (): Promise<{
+export type StatusSnapshot = {
   monitors: Record<string, MonitorStatus>;
   lastRun: number | null;
   events: StatusEvent[];
   openIncidents: Record<string, string>;
-}> => {
+};
+
+const readStatus = async (): Promise<StatusSnapshot> => {
   const r = kv();
   const dates = Array.from({ length: HISTORY_DAYS }, (_, i) =>
     dateStr(HISTORY_DAYS - 1 - i),
@@ -119,8 +144,26 @@ const loadStatusImpl = async (): Promise<{
   };
 };
 
-/** Request-deduped: multiple Suspense islands share one KV round-trip. */
-export const loadStatus = cache(loadStatusImpl);
+const loadStatusImpl = async (): Promise<Loaded<StatusSnapshot>> => {
+  "use cache";
+  cacheLife(STATUS_CACHE_LIFE);
+  try {
+    return { ok: true, value: await readStatus() };
+  } catch {
+    return { ok: false };
+  }
+};
+
+const loadStatusCached = cache(loadStatusImpl);
+
+/** One KV round-trip per revalidation serves the whole site instead of one
+ *  per request; `cache()` also dedupes the Suspense islands that share it
+ *  inside a single render. Rejects when KV is unreachable. */
+export async function loadStatus(): Promise<StatusSnapshot> {
+  const result = await loadStatusCached();
+  if (!result.ok) throw unavailable();
+  return result.value;
+}
 
 export type RegionDayStat = DayStat & { avgMs: number | null };
 
@@ -148,7 +191,7 @@ export type MonitorDetail = {
   incidents: IncidentSummary[];
 };
 
-const loadMonitorDetailImpl = async (
+const readMonitorDetail = async (
   monitorId: string,
 ): Promise<MonitorDetail | null> => {
   const monitor = MONITORS.find((m) => m.id === monitorId);
@@ -244,7 +287,29 @@ const loadMonitorDetailImpl = async (
   };
 };
 
-export const loadMonitorDetail = cache(loadMonitorDetailImpl);
+const loadMonitorDetailImpl = async (
+  monitorId: string,
+): Promise<Loaded<MonitorDetail | null>> => {
+  "use cache";
+  cacheLife(STATUS_CACHE_LIFE);
+  try {
+    return { ok: true, value: await readMonitorDetail(monitorId) };
+  } catch {
+    return { ok: false };
+  }
+};
+
+const loadMonitorDetailCached = cache(loadMonitorDetailImpl);
+
+/** Resolves to null for an unknown monitor id and rejects when KV is
+ *  unreachable - callers rely on that distinction (404 vs 503). */
+export async function loadMonitorDetail(
+  monitorId: string,
+): Promise<MonitorDetail | null> {
+  const result = await loadMonitorDetailCached(monitorId);
+  if (!result.ok) throw unavailable();
+  return result.value;
+}
 
 export type IncidentFeedItem = {
   id: string;
@@ -261,27 +326,37 @@ export type IncidentFeedItem = {
 /** Full incident history for the events page — everything within the
  *  uptime window, sourced from the persistent incident records rather
  *  than the small rolling event buffer. */
-const loadIncidentFeedImpl = async (
-  windowDays = HISTORY_DAYS,
+const readIncidentFeed = async (
+  windowDays: number,
 ): Promise<IncidentFeedItem[]> => {
   const r = kv();
   const ids = (await r.lrange<string>(K.incidents, 0, 199)) ?? [];
   if (ids.length === 0) return [];
 
-  const pipe = r.pipeline();
-  for (const id of ids) {
-    pipe.hgetall(K.incident(id));
-    pipe.lrange(K.incidentEvents(id), 0, 99);
-  }
-  const replies = await pipe.exec<unknown[]>();
+  // Two phases on purpose: the metadata hashes are cheap and decide which
+  // incidents fall inside the window, so the event lists - the expensive
+  // half - are only fetched for the ones that will actually be rendered.
+  const metaPipe = r.pipeline();
+  for (const id of ids) metaPipe.hgetall(K.incident(id));
+  const metas = await metaPipe.exec<(Record<string, unknown> | null)[]>();
 
   const cutoff = Date.now() - windowDays * 86_400_000;
-  const items: IncidentFeedItem[] = [];
+  const kept: { id: string; meta: Record<string, unknown> }[] = [];
   ids.forEach((id, i) => {
-    const meta = (replies[i * 2] ?? {}) as Record<string, unknown>;
-    const rawEvents = (replies[i * 2 + 1] ?? []) as unknown[];
+    const meta = metas[i] ?? {};
+    if (!meta.monitorId || Number(meta.startedAt ?? 0) < cutoff) return;
+    kept.push({ id, meta });
+  });
+  if (kept.length === 0) return [];
+
+  const eventsPipe = r.pipeline();
+  for (const { id } of kept) eventsPipe.lrange(K.incidentEvents(id), 0, 99);
+  const eventReplies = await eventsPipe.exec<(unknown[] | null)[]>();
+
+  const items: IncidentFeedItem[] = [];
+  kept.forEach(({ id, meta }, i) => {
+    const rawEvents = eventReplies[i] ?? [];
     const startedAt = Number(meta.startedAt ?? 0);
-    if (!meta.monitorId || startedAt < cutoff) return;
 
     const events: StatusEvent[] = [];
     for (const raw of rawEvents) {
@@ -316,4 +391,24 @@ const loadIncidentFeedImpl = async (
   );
 };
 
-export const loadIncidentFeed = cache(loadIncidentFeedImpl);
+const loadIncidentFeedImpl = async (
+  windowDays: number,
+): Promise<Loaded<IncidentFeedItem[]>> => {
+  "use cache";
+  cacheLife(STATUS_CACHE_LIFE);
+  try {
+    return { ok: true, value: await readIncidentFeed(windowDays) };
+  } catch {
+    return { ok: false };
+  }
+};
+
+const loadIncidentFeedCached = cache(loadIncidentFeedImpl);
+
+export async function loadIncidentFeed(
+  windowDays = HISTORY_DAYS,
+): Promise<IncidentFeedItem[]> {
+  const result = await loadIncidentFeedCached(windowDays);
+  if (!result.ok) throw unavailable();
+  return result.value;
+}
