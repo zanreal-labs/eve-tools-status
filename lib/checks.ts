@@ -35,6 +35,36 @@ export const CHECK_TIMEOUT_MS = 10_000;
 export const RETRY_DELAY_MS = 500;
 export const USER_AGENT =
   "Mozilla/5.0 (compatible; EveToolsStatusBot/1.0; +https://eve-tools-status.com/docs)";
+/** How much of a response body a probe reads before it gives up on the rest.
+ *  The body is read at all so latency reflects a full response and not just
+ *  headers, but reading all of it makes every probe as large as whatever the
+ *  target chooses to send - and `redirect: "follow"` means that can turn out
+ *  to be a file rather than a page. A single oversized response would then
+ *  take the whole region's round with it.
+ *  1 MiB clears every monitored body but one (largest measured ~2.4 MB, next
+ *  ~820 KB), so recorded latency is unchanged for 26 of the 27 monitors and
+ *  only the outlier gets trimmed. Lowering it trims transfer further, at the
+ *  cost of a step down in the latency series of every monitor it crosses. */
+export const MAX_BODY_BYTES = 1_048_576;
+
+/** Read at most `MAX_BODY_BYTES` of a response, then let the rest go.
+ *  Cancelling releases the connection instead of waiting the body out, and the
+ *  fetch's abort signal still errors the read, so a body that stalls mid-stream
+ *  stays bounded by the probe timeout too. */
+export async function drainBody(res: Response): Promise<void> {
+  if (!res.body) return;
+  const reader = res.body.getReader();
+  let read = 0;
+  try {
+    while (read < MAX_BODY_BYTES) {
+      const { done, value } = await reader.read();
+      if (done) return;
+      read += value.byteLength;
+    }
+  } finally {
+    await reader.cancel().catch(() => undefined);
+  }
+}
 
 async function attempt(
   monitorId: string,
@@ -50,8 +80,9 @@ async function attempt(
       headers: { "user-agent": USER_AGENT, accept: "*/*" },
       signal: AbortSignal.timeout(timeoutMs),
     });
-    // Drain body so latency reflects a full response.
-    await res.arrayBuffer().catch(() => undefined);
+    // Drain body so latency reflects a full response, bounded so one
+    // oversized target cannot dictate the probe's memory and transfer.
+    await drainBody(res).catch(() => undefined);
     return {
       monitorId,
       ok: res.status >= 200 && res.status < 400,
@@ -70,7 +101,7 @@ async function checkOne(
 ): Promise<CheckResult> {
   const first = await attempt(monitorId, url, timeoutMs);
   if (first.ok) return first;
-  // One retry after a short pause — a single slow round shouldn't page as down.
+  // One retry after a short pause - a single slow round shouldn't page as down.
   await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
   return attempt(monitorId, url, timeoutMs);
 }
@@ -137,7 +168,7 @@ export async function runChecks(region: Region): Promise<CheckResult[]> {
     };
   }
 
-  // Incident bookkeeping — permalink pages live off these records.
+  // Incident bookkeeping - permalink pages live off these records.
   // Maintenance and outage incidents use separate open pointers and id
   // prefixes ("<mid>-m<ts>" vs "<mid>-<ts>").
   for (const e of events) {
