@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { authorized, USER_AGENT } from "@/lib/checks";
+import { authorized, drainBody, USER_AGENT } from "@/lib/checks";
 import { MONITORS } from "@/lib/monitors";
 
 export const maxDuration = 30;
@@ -41,7 +41,7 @@ export async function GET(req: Request) {
       headers: { "user-agent": USER_AGENT, accept: "*/*" },
       signal: AbortSignal.timeout(15_000),
     });
-    await res.arrayBuffer().catch(() => undefined);
+    await drainBody(res).catch(() => undefined);
     return NextResponse.json({
       url: target,
       status: res.status,
