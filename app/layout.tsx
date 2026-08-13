@@ -94,7 +94,6 @@ export default function RootLayout({
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span>
-              Made &amp; powered by{" "}
               <a
                 href="https://zanreal.com?utm_source=eve-tools-status&utm_medium=referral&utm_campaign=status-page&utm_content=footer"
                 target="_blank"
