@@ -101,7 +101,7 @@ export default function RootLayout({
                 rel="noopener noreferrer"
                 className="text-zinc-300 underline-offset-4 hover:underline"
               >
-                ZanReal
+                ZanReal, an AI &amp; web development agency
               </a>
             </span>
             <span className="flex items-center gap-4">
