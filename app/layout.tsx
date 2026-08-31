@@ -95,12 +95,12 @@ export default function RootLayout({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span>
               <a
-                href="https://zanreal.com?utm_source=eve-tools-status&utm_medium=referral&utm_campaign=status-page&utm_content=footer"
+                href="https://zanreal.com/services/websites-and-branding/websites?utm_source=eve-tools-status&utm_medium=referral&utm_campaign=status-page&utm_content=footer"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-zinc-300 underline-offset-4 hover:underline"
               >
-                ZanReal, an AI &amp; web development agency
+                ZanReal - Website Development
               </a>
             </span>
             <span className="flex items-center gap-4">
