@@ -232,6 +232,13 @@ export const CATEGORIES: Category[] = [
         siteUrl: "https://eveapex.com/",
         description: "Wormhole & Pochven intel & maps",
       },
+      {
+        id: "darkbeacon",
+        name: "Darkbeacon",
+        url: "https://app.darkbeacon.space/api/health",
+        siteUrl: "https://darkbeacon.space/",
+        description: "Self-hosted wormhole chain mapper",
+      },
     ],
   },
   {
