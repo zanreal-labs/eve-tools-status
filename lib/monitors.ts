@@ -228,7 +228,7 @@ export const CATEGORIES: Category[] = [
       {
         id: "eveapex",
         name: "EVE Apex",
-        url: "https://eveapex.com/",
+        url: "https://eveapex.com/api/health",
         siteUrl: "https://eveapex.com/",
         description: "Wormhole & Pochven intel & maps",
       },
