@@ -2,7 +2,7 @@
 
 Status page for EVE Online community tools — https://eve-tools-status.com
 
-27 monitors across 6 categories (core services, killboards, market & industry,
+28 monitors across 6 categories (core services, killboards, market & industry,
 maps & intel, wormholes, reference), checked every 15 minutes from 4 Vercel
 regions (`iad1`, `sfo1`, `fra1`, `syd1`).
 

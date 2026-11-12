@@ -225,6 +225,13 @@ export const CATEGORIES: Category[] = [
         siteUrl: "https://eve-nexum.com/",
         description: "Open-source wormhole mapper",
       },
+      {
+        id: "eveapex",
+        name: "EVE Apex",
+        url: "https://eveapex.com/",
+        siteUrl: "https://eveapex.com/",
+        description: "Wormhole & Pochven intel & maps",
+      },
     ],
   },
   {
